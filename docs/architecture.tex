@@ -1,75 +1,112 @@
 \documentclass[tikz,border=18pt]{standalone}
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
-\usetikzlibrary{arrows.meta,backgrounds,fit,positioning}
+\usetikzlibrary{arrows.meta,backgrounds}
 \hyphenpenalty=10000
 
 \definecolor{ink}{HTML}{24314A}
 \definecolor{muted}{HTML}{667085}
-\definecolor{blue}{HTML}{6D8DFF}
+\definecolor{blue}{HTML}{6485F7}
 \definecolor{bluefill}{HTML}{EEF3FF}
-\definecolor{pink}{HTML}{E88BB7}
+\definecolor{pink}{HTML}{DF78AD}
 \definecolor{pinkfill}{HTML}{FFF0F7}
-\definecolor{purple}{HTML}{9B7BEA}
+\definecolor{purple}{HTML}{8B6DE0}
 \definecolor{purplefill}{HTML}{F4F0FF}
-\definecolor{green}{HTML}{43A78B}
+\definecolor{green}{HTML}{31987D}
 \definecolor{greenfill}{HTML}{EAF9F4}
 
 \tikzset{
-  box/.style={
-    draw=ink!22,
+  stage/.style={
     rounded corners=4pt,
     very thick,
-    fill=white,
-    text=ink,
     align=center,
-    minimum height=13mm,
+    minimum height=18mm,
     text width=34mm,
-    inner sep=5pt
+    inner sep=4pt,
+    font=\sffamily\small,
+    text=ink
   },
-  host/.style={box,draw=blue,fill=bluefill},
-  server/.style={box,draw=purple,fill=purplefill},
-  widget/.style={box,draw=pink,fill=pinkfill},
-  result/.style={box,draw=green,fill=greenfill},
-  flow/.style={-{Latex[length=3mm]},very thick,draw=ink!68},
-  return/.style={-{Latex[length=3mm]},very thick,draw=green,dashed},
-  label/.style={font=\sffamily\scriptsize,text=muted,align=center},
-  title/.style={font=\sffamily\bfseries\large,text=ink},
-  body/.style={font=\sffamily\small}
+  host/.style={stage,draw=blue,fill=bluefill},
+  server/.style={stage,draw=purple,fill=purplefill},
+  widget/.style={stage,draw=pink,fill=pinkfill},
+  result/.style={stage,draw=green,fill=greenfill},
+  forward/.style={-{Latex[length=3mm,width=2mm]},line width=1.15pt,draw=ink!68},
+  return/.style={-{Latex[length=3mm,width=2mm]},line width=1.2pt,draw=green,dashed},
+  laneTitle/.style={font=\sffamily\bfseries\small,text=ink},
+  footer/.style={font=\sffamily\scriptsize,text=muted,align=center}
 }
 
 \begin{document}
-\begin{tikzpicture}[node distance=14mm and 15mm]
-  \node[host] (model) {\textbf{ChatGPT Host}\\Model + MCP client};
-  \node[server,right=of model] (http) {\textbf{HTTP boundary}\\\texttt{/mcp} \quad \texttt{/health}\\\texttt{/icon.png}};
-  \node[server,right=of http] (mcp) {\textbf{MCP server}\\Tools + UI resource};
-  \node[widget,right=of mcp] (ui) {\textbf{Inline widget}\\Native DOM + MCP Apps bridge};
-
-  \draw[flow] (model) -- node[label,above]{Streamable HTTP} (http);
-  \draw[flow] (http) -- node[label,above]{validate + dispatch} (mcp);
-  \draw[flow] (mcp) -- node[label,above]{structuredContent\\+ \texttt{ui://} resource} (ui);
-
-  \node[server,below=18mm of http] (config) {\textbf{Configuration core}\\Zod schemas + normalization\\templates + safe bindings};
-  \node[widget,below=18mm of mcp] (interaction) {\textbf{Interaction engine}\\controls + conditions\\wizard + preview + validation};
-  \node[result,below=18mm of ui] (delivery) {\textbf{Result delivery}\\freeze + retry + fallback\\versioned result protocol};
-
-  \draw[flow] (mcp) -- (config);
-  \draw[flow] (config) -- (interaction);
-  \draw[flow] (ui) -- (interaction);
-  \draw[flow] (interaction) -- (delivery);
-
-  \draw[return] (delivery.south) -- ++(0,-10mm) -| node[label,pos=.62,below]{\texttt{updateModelContext} + \texttt{sendMessage}} (model.south);
-
+\begin{tikzpicture}[x=1mm,y=1mm]
+  % Fixed ownership regions keep the main flow horizontal and the return path isolated.
   \begin{scope}[on background layer]
-    \node[draw=ink!12,rounded corners=7pt,fill=ink!2,fit=(model)(http)(mcp)(ui),inner sep=10mm] (runtime) {};
-    \node[draw=ink!12,rounded corners=7pt,fill=white,fit=(config)(interaction)(delivery),inner sep=8mm] (internals) {};
+    \path[draw=blue!30,fill=blue!3,rounded corners=7pt,line width=.8pt]
+      (-22,2) rectangle (22,-104);
+    \path[draw=purple!30,fill=purple!3,rounded corners=7pt,line width=.8pt]
+      (26,2) rectangle (166,-42);
+    \path[draw=pink!30,fill=pink!3,rounded corners=7pt,line width=.8pt]
+      (170,2) rectangle (214,-104);
   \end{scope}
 
-  \node[title,above=6mm of runtime.north] {InBridge technical architecture};
-  \node[label,anchor=west] at ([xshift=2mm,yshift=-4mm]runtime.north west) {REQUEST / RENDER PATH};
-  \node[label,anchor=west] at ([xshift=2mm,yshift=-4mm]internals.north west) {DECLARATIVE CORE / SUBMISSION STATE MACHINE};
+  \node[laneTitle] at (0,-7) {CHATGPT HOST};
+  \node[laneTitle] at (96,-7) {INBRIDGE SERVER};
+  \node[laneTitle] at (192,-7) {INLINE WIDGET};
 
-  \node[label,below=17mm of internals.south] (ops) {Vercel Express Functions \quad|\quad GitHub Actions CI \quad|\quad 6-hour production smoke monitor};
-  \draw[draw=ink!18,very thick] ([xshift=-68mm,yshift=3mm]ops.north) -- ([xshift=68mm,yshift=3mm]ops.north);
+  \node[host] (tool) at (0,-24) {
+    \textbf{01 \quad Tool selection}\\
+    Model selects an InBridge tool
+  };
+  \node[server] (http) at (48,-24) {
+    \textbf{02 \quad HTTP boundary}\\
+    \texttt{POST /mcp}\\
+    Stateless Streamable HTTP
+  };
+  \node[server] (core) at (96,-24) {
+    \textbf{03 \quad Configuration core}\\
+    Zod validation + normalization\\
+    Template construction
+  };
+  \node[server] (response) at (144,-24) {
+    \textbf{04 \quad MCP response}\\
+    \texttt{structuredContent}\\
+    \texttt{ui://} app resource
+  };
+
+  \node[widget] (render) at (192,-24) {
+    \textbf{05 \quad Widget render}\\
+    Controls + visibility\\
+    Wizard + safe preview
+  };
+  \node[widget] (confirm) at (192,-57) {
+    \textbf{06 \quad User confirmation}\\
+    Validate + freeze values\\
+    Single-submit guard
+  };
+
+  \node[result] (delivery) at (192,-90) {
+    \textbf{07 \quad Result delivery}\\
+    \texttt{updateModelContext}\\
+    \texttt{sendMessage} + fallback
+  };
+  \node[host] (continue) at (0,-90) {
+    \textbf{08 \quad Task continues}\\
+    Model reads the versioned result
+  };
+
+  \draw[forward] (tool.east) -- (http.west);
+  \draw[forward] (http.east) -- (core.west);
+  \draw[forward] (core.east) -- (response.west);
+  \draw[forward] (response.east) -- (render.west);
+  \draw[forward] (render.south) -- (confirm.north);
+  \draw[forward] (confirm.south) -- (delivery.north);
+  \draw[return] (delivery.west) -- (continue.east);
+
+  \node[font=\sffamily\bfseries\Large,text=ink] at (96,15)
+    {InBridge technical architecture};
+  \node[footer] at (96,-124) {
+    Vercel Express Functions \quad | \quad GitHub Actions CI
+    \quad | \quad 6-hour production smoke monitor
+  };
+  \draw[draw=ink!18,line width=.8pt] (-10,-117) -- (202,-117);
 \end{tikzpicture}
 \end{document}
