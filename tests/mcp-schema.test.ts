@@ -30,7 +30,7 @@ describe("MCP tool descriptors", () => {
     expect(client.getServerVersion()).toMatchObject({
       name: "inbridge",
       version: "0.10.0",
-      icons: [{ src: APP_ICON_URL, mimeType: "image/png", sizes: ["1254x1254"] }]
+      icons: [{ src: APP_ICON_URL, mimeType: "image/png", sizes: ["981x1040"] }]
     });
   });
 

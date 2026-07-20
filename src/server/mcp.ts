@@ -18,13 +18,13 @@ import {
 } from "./templates.js";
 
 export const WIDGET_URI = "ui://inbridge/interaction-v10.html";
-export const APP_ICON_URL = "https://mcp.example.com/icon.png";
+export const APP_ICON_URL = "https://mcp.example.com/icon.png?v=2";
 
 const APP_ICONS = [
   {
     src: APP_ICON_URL,
     mimeType: "image/png",
-    sizes: ["1254x1254"]
+    sizes: ["981x1040"]
   }
 ];
 

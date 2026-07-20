@@ -48,7 +48,7 @@ try {
   await client.connect(transport);
 
   assert.deepEqual(client.getServerVersion()?.icons, [
-    { src: APP_ICON_URL, mimeType: "image/png", sizes: ["1254x1254"] }
+    { src: APP_ICON_URL, mimeType: "image/png", sizes: ["981x1040"] }
   ]);
 
   const tools = await client.listTools();
