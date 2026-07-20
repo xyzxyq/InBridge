@@ -320,4 +320,81 @@ describe("interactionConfigSchema", () => {
       ])
     ).toThrow(/must preserve control order/);
   });
+
+  it("accepts comparison cards and applies list defaults", () => {
+    const parsed = interactionConfigSchema.parse({
+      interactionId: "compare_plans",
+      title: "Compare plans",
+      controls: [
+        {
+          id: "plan",
+          type: "comparison_cards",
+          label: "Plan",
+          required: true,
+          options: [
+            { value: "fast", title: "Fast", badge: "Recommended", pros: ["Quick"], cons: ["Limited"] },
+            { value: "safe", title: "Safe", description: "Lower risk" }
+          ],
+          defaultValue: "fast"
+        }
+      ]
+    });
+
+    expect(parsed.controls[0]).toMatchObject({
+      type: "comparison_cards",
+      defaultValue: "fast",
+      options: [
+        { value: "fast", pros: ["Quick"], cons: ["Limited"] },
+        { value: "safe", pros: [], cons: [] }
+      ]
+    });
+  });
+
+  it("rejects invalid comparison card options and defaults", () => {
+    const parse = (options: unknown[], defaultValue = "fast") =>
+      interactionConfigSchema.parse({
+        interactionId: "bad_comparison",
+        title: "Bad comparison",
+        controls: [{ id: "plan", type: "comparison_cards", label: "Plan", options, defaultValue }]
+      });
+    const valid = [
+      { value: "fast", title: "Fast" },
+      { value: "safe", title: "Safe" }
+    ];
+
+    expect(() => parse(valid, "missing")).toThrow(/defaultValue must match an option value/);
+    expect(() => parse([valid[0], { value: "fast", title: "Duplicate" }])).toThrow(/option values must be unique/);
+    expect(() => parse([valid[0]])).toThrow();
+    expect(() => parse([...valid, ...valid, ...valid, { value: "extra", title: "Extra" }])).toThrow();
+    expect(() => parse([{ ...valid[0], pros: ["1", "2", "3", "4", "5", "6"] }, valid[1]])).toThrow();
+    expect(() => parse([{ ...valid[0], imageUrl: "https://example.com/a.png" }, valid[1]])).toThrow();
+  });
+
+  it("allows scalar conditions sourced from comparison cards", () => {
+    const parsed = interactionConfigSchema.parse({
+      interactionId: "comparison_condition",
+      title: "Comparison condition",
+      controls: [
+        {
+          id: "plan",
+          type: "comparison_cards",
+          label: "Plan",
+          options: [
+            { value: "fast", title: "Fast" },
+            { value: "safe", title: "Safe" }
+          ]
+        },
+        {
+          id: "details",
+          type: "text",
+          label: "Details",
+          visibleWhen: { controlId: "plan", operator: "equals", value: "safe" }
+        }
+      ]
+    });
+
+    expect(parsed.controls[1]).toMatchObject({
+      visibleWhen: { controlId: "plan", operator: "equals", value: "safe" }
+    });
+  });
 });

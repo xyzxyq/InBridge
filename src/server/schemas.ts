@@ -47,6 +47,17 @@ export const optionSchema = z
   })
   .strict();
 
+export const comparisonCardOptionSchema = z
+  .object({
+    value: z.string().min(1).max(120),
+    title: z.string().min(1).max(120),
+    description: z.string().max(400).optional(),
+    badge: z.string().min(1).max(40).optional(),
+    pros: z.array(z.string().min(1).max(120)).max(5).optional().default([]),
+    cons: z.array(z.string().min(1).max(120)).max(5).optional().default([])
+  })
+  .strict();
+
 const sharedControlFields = {
   id: idSchema,
   label: labelSchema,
@@ -137,6 +148,15 @@ export const colorControlSchema = z
   })
   .strict();
 
+export const comparisonCardsControlSchema = z
+  .object({
+    ...sharedControlFields,
+    type: z.literal("comparison_cards"),
+    options: z.array(comparisonCardOptionSchema).min(2).max(6),
+    defaultValue: z.string().max(120).optional()
+  })
+  .strict();
+
 export const controlSchema = z.discriminatedUnion("type", [
   radioControlSchema,
   checkboxGroupControlSchema,
@@ -145,7 +165,8 @@ export const controlSchema = z.discriminatedUnion("type", [
   textControlSchema,
   numberControlSchema,
   switchControlSchema,
-  colorControlSchema
+  colorControlSchema,
+  comparisonCardsControlSchema
 ]);
 
 const themeBindingsSchema = z
@@ -316,7 +337,10 @@ export const interactionConfigSchema = z
             }
 
             if (
-              (source.type === "radio" || source.type === "select" || source.type === "checkbox_group") &&
+              (source.type === "radio" ||
+                source.type === "select" ||
+                source.type === "checkbox_group" ||
+                source.type === "comparison_cards") &&
               !source.options.some((option) => option.value === condition.value)
             ) {
               ctx.addIssue({
@@ -329,7 +353,7 @@ export const interactionConfigSchema = z
         }
       }
 
-      if (control.type === "radio" || control.type === "select") {
+      if (control.type === "radio" || control.type === "select" || control.type === "comparison_cards") {
         const values = validateOptions(control, index, ctx);
         if (control.defaultValue !== undefined && !values.includes(control.defaultValue)) {
           ctx.addIssue({

@@ -70,4 +70,30 @@ describe("normalizeInteraction", () => {
       { id: "details", title: "Details", controlIds: ["note"] }
     ]);
   });
+
+  it("preserves comparison card content", () => {
+    const normalized = normalizeInteraction({
+      interactionId: "comparison",
+      title: "Comparison",
+      controls: [
+        {
+          id: "plan",
+          type: "comparison_cards",
+          label: "Plan",
+          options: [
+            { value: "fast", title: "Fast", pros: ["Quick"] },
+            { value: "safe", title: "Safe", cons: ["Slower"] }
+          ]
+        }
+      ]
+    });
+
+    expect(normalized.controls[0]).toMatchObject({
+      type: "comparison_cards",
+      options: [
+        { value: "fast", title: "Fast", pros: ["Quick"], cons: [] },
+        { value: "safe", title: "Safe", pros: [], cons: ["Slower"] }
+      ]
+    });
+  });
 });
