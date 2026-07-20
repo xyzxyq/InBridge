@@ -36,7 +36,7 @@ async function waitForHealth(): Promise<void> {
   throw new Error(`Server did not become healthy. ${stderr}`);
 }
 
-const client = new Client({ name: "inbridge-smoke-test", version: "0.9.0" });
+const client = new Client({ name: "inbridge-smoke-test", version: "0.10.0" });
 
 try {
   await waitForHealth();
@@ -55,8 +55,27 @@ try {
   const catalog = catalogResult.structuredContent as { templates?: Array<{ id?: string }> } | undefined;
   assert.deepEqual(
     catalog?.templates?.map((template) => template.id),
-    ["decision", "confirmation", "experiment_config", "theme_config"]
+    ["decision", "confirmation", "experiment_config", "theme_config", "comparison"]
   );
+
+  const comparisonResult = await client.callTool({
+    name: "render_interaction_template",
+    arguments: {
+      templateId: "comparison",
+      interactionId: "smoke_comparison",
+      options: [
+        { value: "fast", title: "Fast", pros: ["Quick"] },
+        { value: "safe", title: "Safe", cons: ["Slower"] }
+      ],
+      defaultValue: "safe"
+    }
+  });
+  assert.equal(comparisonResult.isError, undefined);
+  const comparisonControl = (comparisonResult.structuredContent as {
+    controls?: Array<{ type?: string; defaultValue?: string }>;
+  }).controls?.[0];
+  assert.equal(comparisonControl?.type, "comparison_cards");
+  assert.equal(comparisonControl?.defaultValue, "safe");
 
   const templateResult = await client.callTool({
     name: "render_interaction_template",

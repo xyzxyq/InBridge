@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:," />
+    <title>InBridge comparison host fixture</title>
+    <style>
+      body { margin: 24px; font-family: system-ui, sans-serif; }
+      iframe { width: min(100%, 1000px); height: 820px; border: 0; }
+      pre { max-width: 1000px; padding: 12px; overflow: auto; background: #f3f4f6; }
+    </style>
+  </head>
+  <body>
+    <h1>Comparison host</h1>
+    <iframe title="InBridge widget" src="/tests/fixtures/widget.html"></iframe>
+    <h2>Delivery record</h2>
+    <pre data-delivery>{"contextUpdates":0,"messages":0}</pre>
+    <script>
+      const frame = document.querySelector("iframe");
+      const output = document.querySelector("[data-delivery]");
+      const delivery = { contextUpdates: 0, messages: 0, context: null, message: null };
+      const structuredContent = {
+        interactionId: "comparison_browser_check",
+        title: "选择实施方案",
+        description: "比较后选择一个方案。",
+        controls: [
+          {
+            id: "choice",
+            type: "comparison_cards",
+            label: "方案比较",
+            required: true,
+            options: [
+              {
+                value: "fast", title: "快速方案", description: "优先跑通闭环", badge: "最快",
+                pros: ["交付快", "风险低"], cons: ["扩展能力有限"]
+              },
+              {
+                value: "safe", title: "稳健方案", description: "优先保证长期维护性", badge: "推荐",
+                pros: ["边界清晰", "易扩展"], cons: ["首轮周期更长"]
+              },
+              {
+                value: "novel", title: "创新方案", description: "优先探索差异化能力",
+                pros: ["创新空间大"], cons: ["验证风险较高"]
+              }
+            ]
+          }
+        ],
+        submitLabel: "确认方案",
+        cancelLabel: "取消",
+        preview: { type: "summary", title: "当前选择", bindings: { 方案比较: "choice" } }
+      };
+
+      function showDelivery() {
+        output.textContent = JSON.stringify(delivery, null, 2);
+      }
+
+      function reply(id, result) {
+        frame.contentWindow.postMessage({ jsonrpc: "2.0", id, result }, "*");
+      }
+
+      window.addEventListener("message", (event) => {
+        if (event.source !== frame.contentWindow || event.data?.jsonrpc !== "2.0") return;
+        const message = event.data;
+        if (message.method === "ui/initialize") {
+          reply(message.id, {
+            protocolVersion: message.params.protocolVersion,
+            hostInfo: { name: "inbridge-comparison-fixture", version: "1.0.0" },
+            hostCapabilities: { updateModelContext: { structuredContent: {} }, message: { text: {} } },
+            hostContext: { theme: "light", locale: "zh-CN", platform: "web" }
+          });
+          return;
+        }
+        if (message.method === "ui/notifications/initialized") {
+          frame.contentWindow.postMessage({
+            jsonrpc: "2.0",
+            method: "ui/notifications/tool-result",
+            params: { content: [], structuredContent }
+          }, "*");
+          return;
+        }
+        if (message.method === "ui/update-model-context") {
+          delivery.contextUpdates += 1;
+          delivery.context = message.params.structuredContent;
+          showDelivery();
+          reply(message.id, {});
+          return;
+        }
+        if (message.method === "ui/message") {
+          delivery.messages += 1;
+          delivery.message = message.params;
+          showDelivery();
+          reply(message.id, {});
+        }
+      });
+    </script>
+  </body>
+</html>

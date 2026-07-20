@@ -16,7 +16,7 @@ Phase 1 的最小真实闭环已经通过 ChatGPT Developer Mode 人工验收：
 - 无状态 streaming HTTP MCP endpoint：`POST /mcp`
 - 健康检查：`GET /health`
 - 标准 MCP Apps UI resource：`text/html;profile=mcp-app`
-- 严格白名单 schema，支持 radio、checkbox_group、select、range、text、number、switch、color
+- 严格白名单 schema，支持 radio、checkbox_group、select、range、text、number、switch、color、comparison_cards
 - 安全声明式实时预览：theme_card、summary
 - 必填校验与重复提交保护
 - 确认与取消结果
@@ -31,11 +31,12 @@ Phase 1 的最小真实闭环已经通过 ChatGPT Developer Mode 人工验收：
 - GitHub CI 发布门禁和每 6 小时生产全链路监控
 - 模板发现工具：`list_interaction_templates`
 - 模板渲染工具：`render_interaction_template`
-- 内置 `decision`、`confirmation`、`experiment_config`、`theme_config` 四个严格模板
+- 内置 `decision`、`confirmation`、`experiment_config`、`theme_config`、`comparison` 五个严格模板
 - 声明式条件控件：`equals`、`not_equals`、`includes`、`not_includes`
 - 隐藏字段自动退出必填校验、提交结果和摘要
 - 可选的 2–8 步向导、步骤进度、当前步骤校验和返回保值
 - `experiment_config` 三步配置，只有最终确认才触发 ChatGPT 继续
+- 单选比较卡片：安全展示方案说明、优势、限制和中性标签
 
 ## 环境要求
 
@@ -198,7 +199,7 @@ plan/         初始开发规格
 
 ## 当前阶段边界
 
-Phase 9 已完成向后兼容的多步骤向导，并将实验配置拆分为“基础信息 → 训练配置 → 消融与确认”。当前版本仍不接受模型提供的 HTML、JavaScript、CSS、表达式或外部 URL。
+Phase 10 已完成单选 Comparison Cards 和 `comparison` 模板，用于并列展示方案说明、优势与限制。当前版本仍不接受模型提供的图片 URL、HTML、JavaScript、CSS、表达式或外部 URL。
 
 ## 提交结果状态
 
