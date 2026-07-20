@@ -34,6 +34,8 @@ Phase 1 的最小真实闭环已经通过 ChatGPT Developer Mode 人工验收：
 - 内置 `decision`、`confirmation`、`experiment_config`、`theme_config` 四个严格模板
 - 声明式条件控件：`equals`、`not_equals`、`includes`、`not_includes`
 - 隐藏字段自动退出必填校验、提交结果和摘要
+- 可选的 2–8 步向导、步骤进度、当前步骤校验和返回保值
+- `experiment_config` 三步配置，只有最终确认才触发 ChatGPT 继续
 
 ## 环境要求
 
@@ -196,7 +198,7 @@ plan/         初始开发规格
 
 ## 当前阶段边界
 
-Phase 8 已完成安全条件控件和实验模板中的“消融实验 → 消融变量”联动。当前版本仍不接受模型提供的 HTML、JavaScript、CSS、表达式或外部 URL。
+Phase 9 已完成向后兼容的多步骤向导，并将实验配置拆分为“基础信息 → 训练配置 → 消融与确认”。当前版本仍不接受模型提供的 HTML、JavaScript、CSS、表达式或外部 URL。
 
 ## 提交结果状态
 

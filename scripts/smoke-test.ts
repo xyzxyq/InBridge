@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { WIDGET_URI } from "../src/server/mcp.js";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const port = 3100 + Math.floor(Math.random() * 500);
@@ -35,7 +36,7 @@ async function waitForHealth(): Promise<void> {
   throw new Error(`Server did not become healthy. ${stderr}`);
 }
 
-const client = new Client({ name: "inbridge-smoke-test", version: "0.8.0" });
+const client = new Client({ name: "inbridge-smoke-test", version: "0.9.0" });
 
 try {
   await waitForHealth();
@@ -72,6 +73,10 @@ try {
   assert.equal(templateResult.isError, undefined);
   assert.equal((templateResult.structuredContent as { interactionId?: string })?.interactionId, "smoke_experiment");
   assert.equal((templateResult.structuredContent as { controls?: unknown[] })?.controls?.length, 9);
+  assert.deepEqual(
+    (templateResult.structuredContent as { steps?: Array<{ id?: string }> }).steps?.map((step) => step.id),
+    ["basics", "training", "ablation_review"]
+  );
   const templateControls = (templateResult.structuredContent as {
     controls?: Array<{ id?: string; visibleWhen?: { controlId?: string; operator?: string; value?: unknown } }>;
   }).controls;
@@ -138,7 +143,7 @@ try {
   assert.equal((result.structuredContent as { interactionId?: string })?.interactionId, "smoke_choice");
   assert.equal((result.structuredContent as { controls?: unknown[] })?.controls?.length, 8);
 
-  const resource = await client.readResource({ uri: "ui://inbridge/interaction-v8.html" });
+  const resource = await client.readResource({ uri: WIDGET_URI });
   const widget = resource.contents[0];
   assert(widget);
   assert.equal(widget.mimeType, "text/html;profile=mcp-app");

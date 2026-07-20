@@ -17,7 +17,7 @@ import {
   templateCatalogOutputSchema
 } from "./templates.js";
 
-export const WIDGET_URI = "ui://inbridge/interaction-v8.html";
+export const WIDGET_URI = "ui://inbridge/interaction-v9.html";
 
 const projectRoot = process.cwd();
 
@@ -43,7 +43,7 @@ async function loadWidgetHtml(): Promise<string> {
 
 export function createMcpServer(): McpServer {
   const server = new McpServer(
-    { name: "inbridge", version: "0.8.0" },
+    { name: "inbridge", version: "0.9.0" },
     {
       instructions:
         "Prefer render_interaction_template when decision, confirmation, experiment_config, or theme_config matches the task. Use list_interaction_templates when unsure. Use render_interaction only for novel forms that need custom controls. After rendering, wait for the user to confirm or cancel in the inline panel."

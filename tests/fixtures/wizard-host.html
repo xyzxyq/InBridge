@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:," />
+    <title>InBridge wizard host fixture</title>
+    <style>
+      body { margin: 24px; font-family: system-ui, sans-serif; }
+      iframe { width: min(100%, 960px); height: 920px; border: 0; }
+      pre { max-width: 960px; padding: 12px; overflow: auto; background: #f3f4f6; }
+    </style>
+  </head>
+  <body>
+    <h1>Wizard host</h1>
+    <iframe title="InBridge widget" src="/tests/fixtures/widget.html"></iframe>
+    <h2>Delivery record</h2>
+    <pre data-delivery>{"contextUpdates":0,"messages":0}</pre>
+    <script>
+      const frame = document.querySelector("iframe");
+      const output = document.querySelector("[data-delivery]");
+      const delivery = { contextUpdates: 0, messages: 0, context: null, message: null };
+      const structuredContent = {
+        interactionId: "wizard_browser_check",
+        title: "配置实验方案",
+        description: "完成三个步骤后统一提交。",
+        controls: [
+          {
+            id: "research_direction", type: "radio", label: "研究方向", required: true,
+            options: [{ label: "RL", value: "rl" }, { label: "MARL", value: "marl" }], defaultValue: "marl"
+          },
+          {
+            id: "environments", type: "checkbox_group", label: "实验环境", required: true,
+            options: [{ label: "CartPole", value: "cartpole" }, { label: "Atari", value: "atari" }], defaultValue: ["cartpole"]
+          },
+          {
+            id: "information_density", type: "select", label: "信息密度", required: false,
+            options: [{ label: "低", value: "low" }, { label: "高", value: "high" }], defaultValue: "high"
+          },
+          { id: "training_budget", type: "range", label: "训练预算", required: false, min: 0, max: 100, step: 5, defaultValue: 80, showValue: true },
+          { id: "seed_count", type: "number", label: "随机种子数量", required: false, min: 1, max: 100, step: 1, defaultValue: 8 },
+          { id: "primary_color", type: "color", label: "图表主色", required: false, defaultValue: "#2563EB" },
+          { id: "note", type: "text", label: "补充说明", required: false, defaultValue: "保持可复现", maxLength: 2000 },
+          { id: "ablation", type: "switch", label: "消融实验", required: false, defaultValue: true },
+          {
+            id: "ablation_variables", type: "checkbox_group", label: "消融变量", required: false,
+            options: [{ label: "网络架构", value: "network_architecture" }, { label: "奖励塑形", value: "reward_shaping" }],
+            defaultValue: ["network_architecture"], visibleWhen: { controlId: "ablation", operator: "equals", value: true }
+          }
+        ],
+        steps: [
+          { id: "basics", title: "基础信息", controlIds: ["research_direction", "environments", "information_density"] },
+          { id: "training", title: "训练配置", controlIds: ["training_budget", "seed_count", "primary_color", "note"] },
+          { id: "ablation_review", title: "消融与确认", controlIds: ["ablation", "ablation_variables"] }
+        ],
+        submitLabel: "确认实验配置",
+        cancelLabel: "取消",
+        preview: { type: "summary", title: "实验配置摘要" }
+      };
+
+      function showDelivery() {
+        output.textContent = JSON.stringify(delivery, null, 2);
+      }
+
+      function reply(id, result) {
+        frame.contentWindow.postMessage({ jsonrpc: "2.0", id, result }, "*");
+      }
+
+      window.addEventListener("message", (event) => {
+        if (event.source !== frame.contentWindow || event.data?.jsonrpc !== "2.0") return;
+        const message = event.data;
+        if (message.method === "ui/initialize") {
+          reply(message.id, {
+            protocolVersion: message.params.protocolVersion,
+            hostInfo: { name: "inbridge-wizard-fixture", version: "1.0.0" },
+            hostCapabilities: { updateModelContext: { structuredContent: {} }, message: { text: {} } },
+            hostContext: { theme: "light", locale: "zh-CN", platform: "web" }
+          });
+          return;
+        }
+        if (message.method === "ui/notifications/initialized") {
+          frame.contentWindow.postMessage({
+            jsonrpc: "2.0",
+            method: "ui/notifications/tool-result",
+            params: { content: [], structuredContent }
+          }, "*");
+          return;
+        }
+        if (message.method === "ui/update-model-context") {
+          delivery.contextUpdates += 1;
+          delivery.context = message.params.structuredContent;
+          showDelivery();
+          reply(message.id, {});
+          return;
+        }
+        if (message.method === "ui/message") {
+          delivery.messages += 1;
+          delivery.message = message.params;
+          showDelivery();
+          reply(message.id, {});
+        }
+      });
+    </script>
+  </body>
+</html>
