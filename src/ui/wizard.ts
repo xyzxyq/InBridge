@@ -21,3 +21,11 @@ export function stepControlIds(steps: WizardStep[], index: number): ReadonlySet<
 export function controlStepIndex(steps: WizardStep[], controlId: string): number {
   return steps.findIndex((step) => step.controlIds.includes(controlId));
 }
+
+export function nextStepIndex(index: number, stepCount: number): number {
+  return clampStepIndex(index + 1, stepCount);
+}
+
+export function previousStepIndex(index: number, stepCount: number): number {
+  return clampStepIndex(index - 1, stepCount);
+}

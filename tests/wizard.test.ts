@@ -3,6 +3,8 @@ import {
   clampStepIndex,
   controlStepIndex,
   isFinalStep,
+  nextStepIndex,
+  previousStepIndex,
   stepControlIds,
   type WizardStep
 } from "../src/ui/wizard.js";
@@ -34,5 +36,12 @@ describe("wizard navigation model", () => {
   it("finds the step that owns a control", () => {
     expect(controlStepIndex(steps, "seed_count")).toBe(1);
     expect(controlStepIndex(steps, "missing")).toBe(-1);
+  });
+
+  it("moves forward and backward without crossing boundaries", () => {
+    expect(nextStepIndex(0, 3)).toBe(1);
+    expect(nextStepIndex(2, 3)).toBe(2);
+    expect(previousStepIndex(1, 3)).toBe(0);
+    expect(previousStepIndex(0, 3)).toBe(0);
   });
 });

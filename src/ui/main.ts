@@ -7,6 +7,14 @@ import {
   type VisibilityCondition,
   type VisibilityValue
 } from "./visibility";
+import {
+  controlStepIndex,
+  isFinalStep,
+  nextStepIndex,
+  previousStepIndex,
+  stepControlIds,
+  type WizardStep
+} from "./wizard";
 import "./styles.css";
 
 interface Option {
@@ -114,6 +122,7 @@ interface Interaction {
   submitLabel: string;
   cancelLabel?: string;
   preview?: Preview;
+  steps?: WizardStep[];
 }
 
 const rootElement = document.querySelector<HTMLElement>("#app");
@@ -125,6 +134,7 @@ let interaction: Interaction | undefined;
 let completed = false;
 let submissionInProgress = false;
 let pendingResult: InteractionResult | undefined;
+let currentStepIndex = 0;
 
 function setStatus(message: string, kind: "info" | "success" | "error" = "info"): void {
   const status = root.querySelector<HTMLElement>("[data-status]");
@@ -152,8 +162,7 @@ function clearInvalid(controlId: string): void {
 
 function handleControlChange(controlId: string): void {
   clearInvalid(controlId);
-  applyVisibility();
-  refreshPreview();
+  refreshWizardView();
 }
 
 function readControlValue(control: Control): VisibilityValue | undefined {
@@ -201,17 +210,23 @@ function visibleControlIds(values = readAllValues()): Set<string> {
 function applyVisibility(): void {
   if (!interaction) return;
   const visible = visibleControlIds();
+  const currentStepControls = interaction.steps
+    ? stepControlIds(interaction.steps, currentStepIndex)
+    : undefined;
   for (const control of interaction.controls) {
     const container = controlContainer(control.id);
     if (!container) continue;
-    const isVisible = visible.has(control.id);
+    const isVisible = visible.has(control.id) && (!currentStepControls || currentStepControls.has(control.id));
     container.hidden = !isVisible;
     container.setAttribute("aria-hidden", String(!isVisible));
     if (!isVisible) container.removeAttribute("data-invalid");
   }
 }
 
-function collectValues(validateRequired = true): Record<string, unknown> | undefined {
+function collectValues(
+  validateRequired = true,
+  controlsToValidate?: ReadonlySet<string>
+): Record<string, unknown> | undefined {
   if (!interaction) return undefined;
   const allValues = readAllValues();
   const visible = visibleControlIds(allValues);
@@ -219,6 +234,7 @@ function collectValues(validateRequired = true): Record<string, unknown> | undef
   if (validateRequired) {
     for (const control of interaction.controls) {
       if (!visible.has(control.id)) continue;
+      if (controlsToValidate && !controlsToValidate.has(control.id)) continue;
       const value = allValues[control.id];
       const missing =
         value === undefined ||
@@ -229,6 +245,22 @@ function collectValues(validateRequired = true): Record<string, unknown> | undef
   }
 
   return selectVisibleValues(allValues, visible);
+}
+
+function advanceWizard(): void {
+  if (!interaction?.steps) return;
+  const currentControls = stepControlIds(interaction.steps, currentStepIndex);
+  if (!collectValues(true, currentControls)) return;
+  currentStepIndex = nextStepIndex(currentStepIndex, interaction.steps.length);
+  setStatus("");
+  refreshWizardView();
+}
+
+function returnToPreviousStep(): void {
+  if (!interaction?.steps) return;
+  currentStepIndex = previousStepIndex(currentStepIndex, interaction.steps.length);
+  setStatus("");
+  refreshWizardView();
 }
 
 function lockForm(): void {
@@ -535,11 +567,51 @@ function refreshPreview(): void {
   }
 }
 
+function refreshWizardView(): void {
+  if (!interaction) return;
+  applyVisibility();
+
+  const steps = interaction.steps;
+  const preview = root.querySelector<HTMLElement>("[data-preview]");
+  const previous = root.querySelector<HTMLButtonElement>("[data-previous-step]");
+  const primary = root.querySelector<HTMLButtonElement>("[data-primary-action]");
+
+  if (!steps) {
+    if (preview) preview.hidden = false;
+    if (previous) previous.hidden = true;
+    if (primary) primary.textContent = interaction.submitLabel;
+    refreshPreview();
+    return;
+  }
+
+  const finalStep = isFinalStep(currentStepIndex, steps.length);
+  const progress = root.querySelector<HTMLElement>("[data-wizard-progress-text]");
+  if (progress) progress.textContent = `步骤 ${currentStepIndex + 1} / ${steps.length}`;
+
+  root.querySelectorAll<HTMLElement>("[data-wizard-step]").forEach((item, index) => {
+    const state = index < currentStepIndex ? "completed" : index === currentStepIndex ? "current" : "upcoming";
+    item.dataset.state = state;
+    if (state === "current") item.setAttribute("aria-current", "step");
+    else item.removeAttribute("aria-current");
+  });
+
+  const description = root.querySelector<HTMLElement>("[data-step-description]");
+  if (description) {
+    description.textContent = steps[currentStepIndex]?.description ?? "";
+    description.hidden = !description.textContent;
+  }
+  if (previous) previous.hidden = currentStepIndex === 0;
+  if (primary) primary.textContent = finalStep ? interaction.submitLabel : "下一步";
+  if (preview) preview.hidden = !finalStep;
+  if (finalStep) refreshPreview();
+}
+
 function render(config: Interaction): void {
   interaction = config;
   completed = false;
   submissionInProgress = false;
   pendingResult = undefined;
+  currentStepIndex = 0;
   root.replaceChildren();
 
   const panel = document.createElement("section");
@@ -555,18 +627,52 @@ function render(config: Interaction): void {
   }
   panel.append(heading);
 
+  if (config.steps) {
+    const navigation = document.createElement("nav");
+    navigation.className = "wizard-progress";
+    navigation.setAttribute("aria-label", "配置步骤");
+    const progressText = document.createElement("p");
+    progressText.className = "wizard-progress-text";
+    progressText.dataset.wizardProgressText = "";
+    const stepList = document.createElement("ol");
+    stepList.className = "wizard-steps";
+    stepList.style.setProperty("--wizard-step-count", String(config.steps.length));
+    config.steps.forEach((step, index) => {
+      const item = document.createElement("li");
+      item.className = "wizard-step";
+      item.dataset.wizardStep = String(index);
+      const number = document.createElement("span");
+      number.className = "wizard-step-number";
+      number.textContent = String(index + 1);
+      const label = document.createElement("span");
+      label.textContent = step.title;
+      item.append(number, label);
+      stepList.append(item);
+    });
+    const stepDescription = document.createElement("p");
+    stepDescription.className = "help wizard-step-description";
+    stepDescription.dataset.stepDescription = "";
+    navigation.append(progressText, stepList, stepDescription);
+    panel.append(navigation);
+  }
+
   const form = document.createElement("form");
   form.addEventListener("submit", (event) => {
     event.preventDefault();
+    if (interaction?.steps && !isFinalStep(currentStepIndex, interaction.steps.length)) {
+      advanceWizard();
+      return;
+    }
     void submit("confirmed");
   });
 
   for (const control of config.controls) {
-    form.append(
+    const element =
       control.type === "radio" || control.type === "checkbox_group"
         ? createChoiceGroup(control)
-        : createField(control)
-    );
+        : createField(control);
+    if (config.steps) element.dataset.stepIndex = String(controlStepIndex(config.steps, control.id));
+    form.append(element);
   }
 
   if (config.preview) {
@@ -578,9 +684,16 @@ function render(config: Interaction): void {
 
   const actions = document.createElement("div");
   actions.className = "actions";
+  const previous = document.createElement("button");
+  previous.type = "button";
+  previous.dataset.previousStep = "";
+  previous.textContent = "上一步";
+  previous.addEventListener("click", returnToPreviousStep);
+  actions.append(previous);
   const confirm = document.createElement("button");
   confirm.type = "submit";
   confirm.className = "primary";
+  confirm.dataset.primaryAction = "";
   confirm.textContent = config.submitLabel;
   actions.append(confirm);
   if (config.cancelLabel) {
@@ -627,8 +740,7 @@ function render(config: Interaction): void {
   panel.append(recovery);
 
   root.append(panel);
-  applyVisibility();
-  refreshPreview();
+  refreshWizardView();
 }
 
 bridge.ontoolresult = (result) => {
