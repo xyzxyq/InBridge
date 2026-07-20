@@ -1,0 +1,36 @@
+{
+  "name": "inbridge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A personal-first MCP App for structured choices inside ChatGPT.",
+  "scripts": {
+    "build": "npm run clean && npm run build:ui && npm run build:server",
+    "clean": "node --eval \"import('node:fs').then(({ rmSync }) => rmSync('dist', { recursive: true, force: true }))\"",
+    "build:ui": "vite build",
+    "build:server": "tsc -p tsconfig.server.json",
+    "dev": "tsx watch src/server/index.ts",
+    "start": "node dist/server/index.js",
+    "test": "vitest run tests",
+    "test:watch": "vitest tests",
+    "typecheck": "tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.ui.json --noEmit",
+    "smoke": "tsx scripts/smoke-test.ts"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/ext-apps": "1.7.4",
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "express": "5.1.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/express": "5.0.5",
+    "@types/node": "24.10.1",
+    "tsx": "4.20.6",
+    "typescript": "7.0.2",
+    "vite": "8.1.5",
+    "vitest": "4.1.10"
+  }
+}
