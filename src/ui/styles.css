@@ -370,6 +370,22 @@ button:disabled {
   resize: vertical;
 }
 
+.recovery {
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid light-dark(#efc4bc, #71443f);
+  border-radius: 10px;
+  background: light-dark(#fff7f5, #382a28);
+}
+
+.recovery > button {
+  background: light-dark(#fff, #2d2d2d);
+}
+
+.fallback {
+  margin-top: 10px;
+}
+
 .loading,
 .fatal {
   margin: 0;

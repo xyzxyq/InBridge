@@ -23,6 +23,9 @@ Phase 1 的最小真实闭环已经通过 ChatGPT Developer Mode 人工验收：
 - `updateModelContext` + `sendMessage` 双通道提交
 - 上下文更新失败时，将压缩 JSON 放入 follow-up message
 - 两条通道都失败时，显示可复制 JSON
+- 根据 Host capabilities 检测上下文更新与消息能力
+- 自动提交失败后可重试同一份冻结结果，不会重复读取或篡改表单值
+- 取消结果使用独立消息，并始终清空未确认值
 
 ## 环境要求
 
@@ -162,4 +165,15 @@ plan/         初始开发规格
 
 ## 当前阶段边界
 
-Phase 3 已实现全部八种 V1 控件和两种安全预览。当前版本仍不接受模型提供的 HTML、JavaScript、CSS 或外部 URL。
+Phase 4 已完成能力检测、提交重试、降级通道、取消语义和重复提交保护。当前版本仍不接受模型提供的 HTML、JavaScript、CSS 或外部 URL。
+
+## 提交结果状态
+
+Widget 内部区分四种可测试结果：
+
+- `sent_with_context`：结构化上下文与触发消息都成功；
+- `sent_with_inline_result`：上下文不可用，完整 JSON 随触发消息发送；
+- `context_only`：结果已写入上下文，但消息触发失败，UI 提供重试；
+- `manual_copy`：Host 两项能力都不可用，UI 提供重试和复制 JSON。
+
+提交开始后表单值会被冻结。同一时刻只允许一个提交请求；只有 Host 确认消息成功后，组件才进入不可重复提交的完成态。

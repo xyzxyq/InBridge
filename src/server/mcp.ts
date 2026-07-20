@@ -9,7 +9,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { normalizeInteraction } from "./normalize.js";
 import { interactionConfigSchema, normalizedInteractionSchema } from "./schemas.js";
 
-export const WIDGET_URI = "ui://inbridge/interaction-v3.html";
+export const WIDGET_URI = "ui://inbridge/interaction-v4.html";
 
 const projectRoot = process.cwd();
 
@@ -35,7 +35,7 @@ async function loadWidgetHtml(): Promise<string> {
 
 export function createMcpServer(): McpServer {
   const server = new McpServer(
-    { name: "inbridge", version: "0.3.0" },
+    { name: "inbridge", version: "0.4.0" },
     {
       instructions:
         "Use render_interaction when the user needs to choose among multiple options and an inline control is more effective than a plain-text reply."

@@ -1,4 +1,5 @@
 import { App } from "@modelcontextprotocol/ext-apps";
+import { deliverInteractionResult } from "./bridge";
 import { createInteractionResult, type InteractionResult } from "./result";
 import "./styles.css";
 
@@ -112,9 +113,11 @@ const rootElement = document.querySelector<HTMLElement>("#app");
 if (!rootElement) throw new Error("Missing #app root");
 const root: HTMLElement = rootElement;
 
-const bridge = new App({ name: "inbridge-widget", version: "0.3.0" });
+const bridge = new App({ name: "inbridge-widget", version: "0.4.0" });
 let interaction: Interaction | undefined;
-let submitted = false;
+let completed = false;
+let submissionInProgress = false;
+let pendingResult: InteractionResult | undefined;
 
 function setStatus(message: string, kind: "info" | "success" | "error" = "info"): void {
   const status = root.querySelector<HTMLElement>("[data-status]");
@@ -217,19 +220,30 @@ function collectValues(validateRequired = true): Record<string, unknown> | undef
 }
 
 function lockForm(): void {
-  root.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLButtonElement>("input, select, button").forEach(
+  root.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLButtonElement>("input, select, .actions button").forEach(
     (element) => {
       element.disabled = true;
     }
   );
 }
 
-function showCopyFallback(result: InteractionResult): void {
+function showRecovery(result: InteractionResult, allowCopy: boolean): void {
+  const recovery = root.querySelector<HTMLElement>("[data-recovery]");
+  const retry = root.querySelector<HTMLButtonElement>("[data-retry]");
   const fallback = root.querySelector<HTMLElement>("[data-fallback]");
   const output = root.querySelector<HTMLTextAreaElement>("[data-result-json]");
-  if (!fallback || !output) return;
+  if (!recovery || !retry || !fallback || !output) return;
+  recovery.hidden = false;
+  retry.disabled = false;
   output.value = JSON.stringify(result, null, 2);
-  fallback.hidden = false;
+  fallback.hidden = !allowCopy;
+}
+
+function hideRecovery(): void {
+  const recovery = root.querySelector<HTMLElement>("[data-recovery]");
+  const retry = root.querySelector<HTMLButtonElement>("[data-retry]");
+  if (recovery) recovery.hidden = true;
+  if (retry) retry.disabled = true;
 }
 
 async function copyFallback(): Promise<void> {
@@ -239,47 +253,42 @@ async function copyFallback(): Promise<void> {
   setStatus("结果 JSON 已复制。请粘贴到对话中继续。", "success");
 }
 
+async function deliverPendingResult(): Promise<void> {
+  if (!pendingResult || submissionInProgress || completed) return;
+  submissionInProgress = true;
+  hideRecovery();
+  setStatus(pendingResult.status === "confirmed" ? "正在提交选择…" : "正在取消…");
+
+  const outcome = await deliverInteractionResult(bridge, pendingResult);
+  submissionInProgress = false;
+
+  if (outcome === "sent_with_context" || outcome === "sent_with_inline_result") {
+    completed = true;
+    setStatus(
+      pendingResult.status === "confirmed" ? "选择已提交，ChatGPT 将继续处理。" : "本次选择已取消。",
+      "success"
+    );
+    return;
+  }
+
+  if (outcome === "context_only") {
+    setStatus("结果已写入模型上下文，但未能触发下一轮。你可以重试自动提交。", "error");
+    showRecovery(pendingResult, false);
+    return;
+  }
+
+  setStatus("Host 暂不支持自动提交。请重试，或复制结果 JSON 到对话中。", "error");
+  showRecovery(pendingResult, true);
+}
+
 async function submit(status: InteractionResult["status"]): Promise<void> {
-  if (!interaction || submitted) return;
+  if (!interaction || completed || submissionInProgress || pendingResult) return;
   const values = status === "confirmed" ? collectValues() : {};
   if (!values) return;
 
-  submitted = true;
+  pendingResult = createInteractionResult(interaction.interactionId, status, values);
   lockForm();
-  setStatus(status === "confirmed" ? "正在提交选择…" : "正在取消…");
-  const result = createInteractionResult(interaction.interactionId, status, values);
-
-  let contextUpdated = false;
-  try {
-    await bridge.updateModelContext({
-      structuredContent: { inbridgeInteractionResult: result },
-      content: [{ type: "text", text: `InBridge interaction result:\n${JSON.stringify(result)}` }]
-    });
-    contextUpdated = true;
-  } catch (error) {
-    console.warn("Unable to update model context", error);
-  }
-
-  const trigger =
-    status === "cancelled"
-      ? "我取消了上面的交互选择。请不要基于未确认的选项继续执行。"
-      : contextUpdated
-        ? "我已确认上面的交互选择。请读取 InBridge 同步的结构化结果并继续当前任务。"
-        : `我已确认上面的交互选择，请根据此结果继续：${JSON.stringify(result)}`;
-
-  try {
-    const response = await bridge.sendMessage({ role: "user", content: [{ type: "text", text: trigger }] });
-    if (response.isError) throw new Error("Host rejected the follow-up message");
-    setStatus(status === "confirmed" ? "选择已提交，ChatGPT 将继续处理。" : "本次选择已取消。", "success");
-  } catch (error) {
-    console.error("Unable to send follow-up message", error);
-    if (contextUpdated) {
-      setStatus("结果已写入模型上下文。请在对话中发送任意消息继续。", "error");
-    } else {
-      setStatus("自动提交失败。请复制下面的结果并粘贴到对话中。", "error");
-      showCopyFallback(result);
-    }
-  }
+  await deliverPendingResult();
 }
 
 function appendDescription(container: HTMLElement, description?: string): void {
@@ -515,7 +524,9 @@ function refreshPreview(): void {
 
 function render(config: Interaction): void {
   interaction = config;
-  submitted = false;
+  completed = false;
+  submissionInProgress = false;
+  pendingResult = undefined;
   root.replaceChildren();
 
   const panel = document.createElement("section");
@@ -575,6 +586,17 @@ function render(config: Interaction): void {
   status.setAttribute("role", "status");
   panel.append(status);
 
+  const recovery = document.createElement("div");
+  recovery.className = "recovery";
+  recovery.dataset.recovery = "";
+  recovery.hidden = true;
+  const retry = document.createElement("button");
+  retry.type = "button";
+  retry.dataset.retry = "";
+  retry.textContent = "重试自动提交";
+  retry.addEventListener("click", () => void deliverPendingResult());
+  recovery.append(retry);
+
   const fallback = document.createElement("div");
   fallback.className = "fallback";
   fallback.dataset.fallback = "";
@@ -588,7 +610,8 @@ function render(config: Interaction): void {
   copy.textContent = "复制结果 JSON";
   copy.addEventListener("click", () => void copyFallback());
   fallback.append(output, copy);
-  panel.append(fallback);
+  recovery.append(fallback);
+  panel.append(recovery);
 
   root.append(panel);
   refreshPreview();

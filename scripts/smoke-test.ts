@@ -32,7 +32,7 @@ async function waitForHealth(): Promise<void> {
   throw new Error(`Server did not become healthy. ${stderr}`);
 }
 
-const client = new Client({ name: "inbridge-smoke-test", version: "0.3.0" });
+const client = new Client({ name: "inbridge-smoke-test", version: "0.4.0" });
 
 try {
   await waitForHealth();
@@ -99,7 +99,7 @@ try {
   assert.equal((result.structuredContent as { interactionId?: string })?.interactionId, "smoke_choice");
   assert.equal((result.structuredContent as { controls?: unknown[] })?.controls?.length, 8);
 
-  const resource = await client.readResource({ uri: "ui://inbridge/interaction-v3.html" });
+  const resource = await client.readResource({ uri: "ui://inbridge/interaction-v4.html" });
   const widget = resource.contents[0];
   assert(widget);
   assert.equal(widget.mimeType, "text/html;profile=mcp-app");
