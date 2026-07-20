@@ -32,7 +32,7 @@ async function waitForHealth(): Promise<void> {
   throw new Error(`Server did not become healthy. ${stderr}`);
 }
 
-const client = new Client({ name: "inbridge-smoke-test", version: "0.1.0" });
+const client = new Client({ name: "inbridge-smoke-test", version: "0.2.0" });
 
 try {
   await waitForHealth();
@@ -57,15 +57,39 @@ try {
             { label: "方案 A", value: "a" },
             { label: "方案 B", value: "b" }
           ]
-        }
+        },
+        {
+          id: "topics",
+          type: "checkbox_group",
+          label: "方向",
+          options: [
+            { label: "RL", value: "rl" },
+            { label: "MARL", value: "marl" }
+          ]
+        },
+        {
+          id: "density",
+          type: "select",
+          label: "密度",
+          options: [
+            { label: "低", value: "low" },
+            { label: "高", value: "high" }
+          ]
+        },
+        { id: "brightness", type: "range", label: "明暗", min: 0, max: 100 },
+        { id: "note", type: "text", label: "备注" },
+        { id: "seeds", type: "number", label: "种子数", min: 1, max: 20 },
+        { id: "ablation", type: "switch", label: "消融实验" },
+        { id: "primary", type: "color", label: "主色" }
       ]
     }
   });
 
   assert.equal(result.isError, undefined);
   assert.equal((result.structuredContent as { interactionId?: string })?.interactionId, "smoke_choice");
+  assert.equal((result.structuredContent as { controls?: unknown[] })?.controls?.length, 8);
 
-  const resource = await client.readResource({ uri: "ui://inbridge/interaction-v1.html" });
+  const resource = await client.readResource({ uri: "ui://inbridge/interaction-v2.html" });
   const widget = resource.contents[0];
   assert(widget);
   assert.equal(widget.mimeType, "text/html;profile=mcp-app");

@@ -2,7 +2,7 @@
 
 InBridge 是一个个人优先的 MCP App：当模型需要用户选择时，它在 ChatGPT 对话中显示内联交互控件，并把用户确认的结构化结果送回模型。
 
-当前 Phase 1 聚焦一个最小真实闭环：
+Phase 1 的最小真实闭环已经通过 ChatGPT Developer Mode 人工验收：
 
 1. 模型调用 `render_interaction`；
 2. ChatGPT 显示单选面板；
@@ -16,7 +16,7 @@ InBridge 是一个个人优先的 MCP App：当模型需要用户选择时，它
 - 无状态 streaming HTTP MCP endpoint：`POST /mcp`
 - 健康检查：`GET /health`
 - 标准 MCP Apps UI resource：`text/html;profile=mcp-app`
-- 严格白名单 schema，仅允许声明式 radio 控件
+- 严格白名单 schema，支持 radio、checkbox_group、select、range、text、number、switch、color
 - 必填校验与重复提交保护
 - 确认与取消结果
 - `updateModelContext` + `sendMessage` 双通道提交
@@ -128,6 +128,6 @@ plan/         初始开发规格
 
 完整设计见 [`plan/interactive-chat-ui-bridge-development-spec.md`](plan/interactive-chat-ui-bridge-development-spec.md)。
 
-## Phase 1 边界
+## 当前阶段边界
 
-当前只实现 radio 控件，用于优先证明真实闭环。多选、下拉框、滑块、文本、数字、开关、颜色与预览将在闭环通过 ChatGPT 人工验收后继续开发。
+Phase 2 已实现全部八种 V1 控件。安全声明式预览（`theme_card`、`summary`）仍属于 Phase 3，当前版本不接受模型提供的 HTML、JavaScript、CSS 或外部 URL。

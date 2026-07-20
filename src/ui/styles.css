@@ -48,12 +48,21 @@ fieldset {
   border: 0;
 }
 
+.control {
+  margin-top: 18px;
+}
+
 fieldset[data-invalid="true"] legend {
   color: #c9342f;
 }
 
 legend {
   padding: 0;
+  font-weight: 650;
+}
+
+.control-label {
+  display: block;
   font-weight: 650;
 }
 
@@ -94,6 +103,103 @@ legend {
   height: 17px;
   margin: 0;
   accent-color: #2563eb;
+}
+
+select,
+input[type="text"],
+input[type="number"] {
+  width: 100%;
+  min-height: 42px;
+  margin-top: 9px;
+  padding: 8px 11px;
+  border: 1px solid light-dark(#d8d8d8, #505050);
+  border-radius: 9px;
+  color: inherit;
+  background: light-dark(#fff, #292929);
+}
+
+.range-row,
+.color-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 9px;
+}
+
+.range-row input {
+  flex: 1;
+  accent-color: #2563eb;
+}
+
+.range-row output,
+.color-row output {
+  min-width: 64px;
+  color: light-dark(#4b5563, #c7c7c7);
+  font-variant-numeric: tabular-nums;
+}
+
+.color-row input {
+  width: 54px;
+  height: 38px;
+  padding: 2px;
+  border: 1px solid light-dark(#d8d8d8, #505050);
+  border-radius: 8px;
+  background: transparent;
+}
+
+.switch-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.switch-row input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.switch-track {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  border-radius: 999px;
+  background: light-dark(#c9c9c9, #555);
+  transition: background 120ms ease;
+}
+
+.switch-track::after {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  content: "";
+  transition: transform 120ms ease;
+}
+
+.switch-row input:checked + .switch-track {
+  background: #2563eb;
+}
+
+.switch-row input:checked + .switch-track::after {
+  transform: translateX(18px);
+}
+
+.switch-row input:focus-visible + .switch-track {
+  outline: 2px solid #4f7cff;
+  outline-offset: 2px;
+}
+
+.control[data-invalid="true"] .control-label,
+.control[data-invalid="true"] .switch-row {
+  color: #c9342f;
 }
 
 .actions {

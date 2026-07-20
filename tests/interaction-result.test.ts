@@ -15,4 +15,15 @@ describe("createInteractionResult", () => {
   it("never carries values into a cancelled result", () => {
     expect(createInteractionResult("demo", "cancelled", { plan: "b" }).values).toEqual({});
   });
+
+  it("preserves typed values from every control", () => {
+    const values = {
+      topics: ["rl", "marl"],
+      brightness: 42,
+      ablation: true,
+      note: "test",
+      optionalNumber: null
+    };
+    expect(createInteractionResult("typed", "confirmed", values).values).toEqual(values);
+  });
 });
