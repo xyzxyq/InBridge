@@ -188,4 +188,79 @@ describe("interactionConfigSchema", () => {
       })
     ).toThrow();
   });
+
+  it("accepts a condition that references an earlier compatible control", () => {
+    const parsed = interactionConfigSchema.parse({
+      interactionId: "conditional_ablation",
+      title: "Conditional controls",
+      controls: [
+        { id: "ablation", type: "switch", label: "Ablation", defaultValue: true },
+        {
+          id: "variables",
+          type: "checkbox_group",
+          label: "Variables",
+          options: [{ label: "Reward", value: "reward" }],
+          visibleWhen: { controlId: "ablation", operator: "equals", value: true }
+        }
+      ]
+    });
+
+    expect(parsed.controls[1]).toMatchObject({
+      visibleWhen: { controlId: "ablation", operator: "equals", value: true }
+    });
+  });
+
+  it("rejects conditions that reference a later control", () => {
+    expect(() =>
+      interactionConfigSchema.parse({
+        interactionId: "forward_reference",
+        title: "Forward reference",
+        controls: [
+          {
+            id: "note",
+            type: "text",
+            label: "Note",
+            visibleWhen: { controlId: "enabled", operator: "equals", value: true }
+          },
+          { id: "enabled", type: "switch", label: "Enabled" }
+        ]
+      })
+    ).toThrow(/must reference an earlier control/);
+  });
+
+  it("rejects condition values that do not match the source type", () => {
+    expect(() =>
+      interactionConfigSchema.parse({
+        interactionId: "wrong_condition_type",
+        title: "Wrong condition type",
+        controls: [
+          { id: "enabled", type: "switch", label: "Enabled" },
+          {
+            id: "note",
+            type: "text",
+            label: "Note",
+            visibleWhen: { controlId: "enabled", operator: "equals", value: "yes" }
+          }
+        ]
+      })
+    ).toThrow(/must be a boolean/);
+  });
+
+  it("only allows membership operators for checkbox groups", () => {
+    expect(() =>
+      interactionConfigSchema.parse({
+        interactionId: "wrong_membership_source",
+        title: "Wrong membership source",
+        controls: [
+          { id: "enabled", type: "switch", label: "Enabled" },
+          {
+            id: "note",
+            type: "text",
+            label: "Note",
+            visibleWhen: { controlId: "enabled", operator: "includes", value: "yes" }
+          }
+        ]
+      })
+    ).toThrow(/requires a checkbox_group source/);
+  });
 });

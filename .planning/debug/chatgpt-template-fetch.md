@@ -1,5 +1,5 @@
 ---
-status: awaiting_human_verify
+status: resolved
 trigger: "Production ChatGPT Apps failure for InBridge Phase 7: list_interaction_templates followed by render_interaction_template with experiment_config defaults yields ‘加载应用时出错 / Failed to fetch template’ after v0.7.0/commit 7bcaa39; raw MCP smoke and resource read pass."
 created: 2026-07-20T19:40:00+08:00
 updated: 2026-07-20T19:46:52+08:00
@@ -63,5 +63,5 @@ started: Began immediately after v0.7.0 / commit 7bcaa39. The prior render_inter
 
 root_cause: render_interaction_template passed a top-level z.discriminatedUnion(...).superRefine(...) as registerAppTool inputSchema. The SDK/ext-apps registration path cannot export that shape and silently published an empty object schema, so ChatGPT had no template argument contract and the failed app-tool flow surfaced as “Failed to fetch template.”
 fix: Added a plain discoverable interactionTemplateToolInputSchema for MCP tools/list, registered its raw object shape, and explicitly parsed callback arguments through the existing strict discriminated-union schema before rendering. Added wire-level descriptor and production-call regression tests.
-verification: Focused regression 2/2 passed; type checks passed; full Vitest suite 39/39 passed; clean Vite/TypeScript production build passed; local end-to-end smoke passed template discovery, production-equivalent template rendering, legacy custom rendering, and resources/read; git diff --check passed. Production ChatGPT verification remains pending deployment by the parent/user.
+verification: Focused regression 2/2 passed; type checks passed; full Vitest suite 39/39 passed; clean Vite/TypeScript production build passed; local and production smoke passed; the user confirmed that the refreshed ChatGPT connection rendered the experiment template successfully on 2026-07-20.
 files_changed: [src/server/templates.ts, src/server/mcp.ts, tests/mcp-schema.test.ts]

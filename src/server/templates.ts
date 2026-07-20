@@ -101,6 +101,12 @@ const defaultEnvironments = [
   { label: "Atari", value: "atari" }
 ];
 
+const defaultAblationVariables = [
+  { label: "网络架构", value: "network_architecture" },
+  { label: "奖励塑形", value: "reward_shaping" },
+  { label: "通信模块", value: "communication_module" }
+];
+
 const experimentTemplateSchema = z
   .object({
     templateId: z.literal("experiment_config"),
@@ -113,6 +119,8 @@ const experimentTemplateSchema = z
     defaultBudget: z.number().int().min(0).max(100).optional().default(80),
     defaultSeedCount: z.number().int().min(1).max(100).optional().default(8),
     defaultAblation: z.boolean().optional().default(true),
+    ablationVariableOptions: z.array(optionSchema).min(1).max(20).optional().default(defaultAblationVariables),
+    defaultAblationVariables: z.array(z.string().min(1).max(120)).max(20).optional().default([]),
     primaryColor: z
       .string()
       .regex(/^#[0-9A-Fa-f]{6}$/)
@@ -175,6 +183,14 @@ export const interactionTemplateRequestSchema = z
       if (new Set(environmentValues).size !== environmentValues.length) {
         context.addIssue({ code: "custom", message: "environment option values must be unique", path: ["environmentOptions"] });
       }
+      const ablationValues = request.ablationVariableOptions.map((option) => option.value);
+      if (new Set(ablationValues).size !== ablationValues.length) {
+        context.addIssue({
+          code: "custom",
+          message: "ablation variable option values must be unique",
+          path: ["ablationVariableOptions"]
+        });
+      }
       if (request.defaultDirection !== undefined && !directionValues.includes(request.defaultDirection)) {
         context.addIssue({
           code: "custom",
@@ -187,6 +203,13 @@ export const interactionTemplateRequestSchema = z
           code: "custom",
           message: "defaultEnvironments must match environment options",
           path: ["defaultEnvironments"]
+        });
+      }
+      if (request.defaultAblationVariables.some((value) => !ablationValues.includes(value))) {
+        context.addIssue({
+          code: "custom",
+          message: "defaultAblationVariables must match ablation variable options",
+          path: ["defaultAblationVariables"]
         });
       }
     }
@@ -220,6 +243,8 @@ export const interactionTemplateToolInputSchema = z
     defaultBudget: z.number().int().min(0).max(100).optional(),
     defaultSeedCount: z.number().int().min(1).max(100).optional(),
     defaultAblation: z.boolean().optional(),
+    ablationVariableOptions: z.array(optionSchema).min(1).max(20).optional(),
+    defaultAblationVariables: z.array(z.string().min(1).max(120)).max(20).optional(),
     primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
     note: z.string().max(2000).optional(),
     defaultStyle: z.enum(["minimal", "tech", "academic", "business", "magazine"]).optional(),
@@ -361,6 +386,14 @@ export function buildInteractionTemplate(input: InteractionTemplateRequest): Nor
             defaultValue: request.defaultAblation
           },
           {
+            id: "ablation_variables",
+            type: "checkbox_group",
+            label: "消融变量",
+            options: request.ablationVariableOptions,
+            defaultValue: request.defaultAblationVariables,
+            visibleWhen: { controlId: "ablation", operator: "equals", value: true }
+          },
+          {
             id: "primary_color",
             type: "color",
             label: "图表主色",
@@ -385,6 +418,7 @@ export function buildInteractionTemplate(input: InteractionTemplateRequest): Nor
             训练预算: "training_budget",
             随机种子数量: "seed_count",
             消融实验: "ablation",
+            消融变量: "ablation_variables",
             图表主色: "primary_color",
             补充说明: "note"
           }

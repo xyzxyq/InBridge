@@ -1,6 +1,12 @@
 import { App } from "@modelcontextprotocol/ext-apps";
 import { deliverInteractionResult } from "./bridge";
 import { createInteractionResult, type InteractionResult } from "./result";
+import {
+  resolveVisibleControlIds,
+  selectVisibleValues,
+  type VisibilityCondition,
+  type VisibilityValue
+} from "./visibility";
 import "./styles.css";
 
 interface Option {
@@ -13,6 +19,7 @@ interface BaseControl {
   label: string;
   description?: string;
   required: boolean;
+  visibleWhen?: VisibilityCondition;
 }
 
 interface RadioControl extends BaseControl {
@@ -113,7 +120,7 @@ const rootElement = document.querySelector<HTMLElement>("#app");
 if (!rootElement) throw new Error("Missing #app root");
 const root: HTMLElement = rootElement;
 
-const bridge = new App({ name: "inbridge-widget", version: "0.7.1" });
+const bridge = new App({ name: "inbridge-widget", version: "0.8.0" });
 let interaction: Interaction | undefined;
 let completed = false;
 let submissionInProgress = false;
@@ -145,78 +152,83 @@ function clearInvalid(controlId: string): void {
 
 function handleControlChange(controlId: string): void {
   clearInvalid(controlId);
+  applyVisibility();
   refreshPreview();
+}
+
+function readControlValue(control: Control): VisibilityValue | undefined {
+  const container = controlContainer(control.id);
+  if (!container) return undefined;
+
+  if (control.type === "radio") {
+    return container.querySelector<HTMLInputElement>('input[type="radio"]:checked')?.value ?? "";
+  }
+  if (control.type === "checkbox_group") {
+    return Array.from(container.querySelectorAll<HTMLInputElement>('input[type="checkbox"]:checked')).map(
+      (input) => input.value
+    );
+  }
+  if (control.type === "select") return container.querySelector<HTMLSelectElement>("select")?.value;
+  if (control.type === "range") {
+    const value = container.querySelector<HTMLInputElement>('input[type="range"]')?.value;
+    return value === undefined ? undefined : Number(value);
+  }
+  if (control.type === "text") return container.querySelector<HTMLInputElement>('input[type="text"]')?.value;
+  if (control.type === "number") {
+    const value = container.querySelector<HTMLInputElement>('input[type="number"]')?.value;
+    return value === undefined ? undefined : value === "" ? null : Number(value);
+  }
+  if (control.type === "switch") {
+    return container.querySelector<HTMLInputElement>('input[type="checkbox"]')?.checked;
+  }
+  return container.querySelector<HTMLInputElement>('input[type="color"]')?.value.toUpperCase();
+}
+
+function readAllValues(): Record<string, VisibilityValue> {
+  if (!interaction) return {};
+  const values: Record<string, VisibilityValue> = {};
+  for (const control of interaction.controls) {
+    const value = readControlValue(control);
+    if (value !== undefined) values[control.id] = value;
+  }
+  return values;
+}
+
+function visibleControlIds(values = readAllValues()): Set<string> {
+  return resolveVisibleControlIds(interaction?.controls ?? [], values);
+}
+
+function applyVisibility(): void {
+  if (!interaction) return;
+  const visible = visibleControlIds();
+  for (const control of interaction.controls) {
+    const container = controlContainer(control.id);
+    if (!container) continue;
+    const isVisible = visible.has(control.id);
+    container.hidden = !isVisible;
+    container.setAttribute("aria-hidden", String(!isVisible));
+    if (!isVisible) container.removeAttribute("data-invalid");
+  }
 }
 
 function collectValues(validateRequired = true): Record<string, unknown> | undefined {
   if (!interaction) return undefined;
-  const values: Record<string, unknown> = {};
+  const allValues = readAllValues();
+  const visible = visibleControlIds(allValues);
 
-  for (const control of interaction.controls) {
-    const container = controlContainer(control.id);
-    if (!container) {
-      if (validateRequired) return markInvalid(control);
-      continue;
-    }
-
-    if (control.type === "radio") {
-      const selected = container.querySelector<HTMLInputElement>('input[type="radio"]:checked');
-      if (validateRequired && control.required && !selected) return markInvalid(control);
-      values[control.id] = selected?.value ?? "";
-    }
-
-    if (control.type === "checkbox_group") {
-      const selected = Array.from(
-        container.querySelectorAll<HTMLInputElement>('input[type="checkbox"]:checked')
-      ).map((input) => input.value);
-      if (validateRequired && control.required && selected.length === 0) return markInvalid(control);
-      values[control.id] = selected;
-    }
-
-    if (control.type === "select") {
-      const input = container.querySelector<HTMLSelectElement>("select");
-      if (!input || (validateRequired && control.required && input.value === "")) return markInvalid(control);
-      values[control.id] = input.value;
-    }
-
-    if (control.type === "range") {
-      const input = container.querySelector<HTMLInputElement>('input[type="range"]');
-      if (!input) {
-        if (validateRequired) return markInvalid(control);
-        continue;
-      }
-      values[control.id] = Number(input.value);
-    }
-
-    if (control.type === "text") {
-      const input = container.querySelector<HTMLInputElement>('input[type="text"]');
-      if (!input || (validateRequired && control.required && input.value.trim() === "")) return markInvalid(control);
-      values[control.id] = input.value;
-    }
-
-    if (control.type === "number") {
-      const input = container.querySelector<HTMLInputElement>('input[type="number"]');
-      if (!input || (validateRequired && control.required && input.value === "")) return markInvalid(control);
-      values[control.id] = input.value === "" ? null : Number(input.value);
-    }
-
-    if (control.type === "switch") {
-      const input = container.querySelector<HTMLInputElement>('input[type="checkbox"]');
-      if (!input || (validateRequired && control.required && !input.checked)) return markInvalid(control);
-      values[control.id] = input.checked;
-    }
-
-    if (control.type === "color") {
-      const input = container.querySelector<HTMLInputElement>('input[type="color"]');
-      if (!input) {
-        if (validateRequired) return markInvalid(control);
-        continue;
-      }
-      values[control.id] = input.value.toUpperCase();
+  if (validateRequired) {
+    for (const control of interaction.controls) {
+      if (!visible.has(control.id)) continue;
+      const value = allValues[control.id];
+      const missing =
+        value === undefined ||
+        (control.required &&
+          (value === null || value === "" || value === false || (Array.isArray(value) && value.length === 0)));
+      if (missing) return markInvalid(control);
     }
   }
 
-  return values;
+  return selectVisibleValues(allValues, visible);
 }
 
 function lockForm(): void {
@@ -379,11 +391,11 @@ function createField(control: Exclude<Control, RadioControl | CheckboxGroupContr
       output.value = input.value;
       input.addEventListener("input", () => {
         output.value = input.value;
-        refreshPreview();
+        handleControlChange(control.id);
       });
       row.append(output);
     } else {
-      input.addEventListener("input", refreshPreview);
+      input.addEventListener("input", () => handleControlChange(control.id));
     }
     container.append(row);
   }
@@ -435,7 +447,7 @@ function createField(control: Exclude<Control, RadioControl | CheckboxGroupContr
     output.value = input.value.toUpperCase();
     input.addEventListener("input", () => {
       output.value = input.value.toUpperCase();
-      refreshPreview();
+      handleControlChange(control.id);
     });
     row.append(input, output);
     container.append(row);
@@ -496,6 +508,7 @@ function renderSummary(container: HTMLElement, preview: SummaryPreview, values: 
     : interaction.controls.map((control) => [control.label, control.id] as const);
 
   for (const [label, controlId] of entries) {
+    if (!Object.hasOwn(values, controlId)) continue;
     const term = document.createElement("dt");
     term.textContent = label;
     const detail = document.createElement("dd");
@@ -614,6 +627,7 @@ function render(config: Interaction): void {
   panel.append(recovery);
 
   root.append(panel);
+  applyVisibility();
   refreshPreview();
 }
 

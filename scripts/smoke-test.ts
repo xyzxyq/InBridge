@@ -35,7 +35,7 @@ async function waitForHealth(): Promise<void> {
   throw new Error(`Server did not become healthy. ${stderr}`);
 }
 
-const client = new Client({ name: "inbridge-smoke-test", version: "0.7.1" });
+const client = new Client({ name: "inbridge-smoke-test", version: "0.8.0" });
 
 try {
   await waitForHealth();
@@ -65,12 +65,21 @@ try {
       defaultDirection: "marl",
       defaultEnvironments: ["cartpole"],
       defaultBudget: 75,
-      defaultSeedCount: 8
+      defaultSeedCount: 8,
+      defaultAblationVariables: ["network_architecture"]
     }
   });
   assert.equal(templateResult.isError, undefined);
   assert.equal((templateResult.structuredContent as { interactionId?: string })?.interactionId, "smoke_experiment");
-  assert.equal((templateResult.structuredContent as { controls?: unknown[] })?.controls?.length, 8);
+  assert.equal((templateResult.structuredContent as { controls?: unknown[] })?.controls?.length, 9);
+  const templateControls = (templateResult.structuredContent as {
+    controls?: Array<{ id?: string; visibleWhen?: { controlId?: string; operator?: string; value?: unknown } }>;
+  }).controls;
+  assert.deepEqual(templateControls?.find((control) => control.id === "ablation_variables")?.visibleWhen, {
+    controlId: "ablation",
+    operator: "equals",
+    value: true
+  });
 
   const result = await client.callTool({
     name: "render_interaction",
@@ -129,7 +138,7 @@ try {
   assert.equal((result.structuredContent as { interactionId?: string })?.interactionId, "smoke_choice");
   assert.equal((result.structuredContent as { controls?: unknown[] })?.controls?.length, 8);
 
-  const resource = await client.readResource({ uri: "ui://inbridge/interaction-v7.html" });
+  const resource = await client.readResource({ uri: "ui://inbridge/interaction-v8.html" });
   const widget = resource.contents[0];
   assert(widget);
   assert.equal(widget.mimeType, "text/html;profile=mcp-app");

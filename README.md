@@ -32,6 +32,8 @@ Phase 1 的最小真实闭环已经通过 ChatGPT Developer Mode 人工验收：
 - 模板发现工具：`list_interaction_templates`
 - 模板渲染工具：`render_interaction_template`
 - 内置 `decision`、`confirmation`、`experiment_config`、`theme_config` 四个严格模板
+- 声明式条件控件：`equals`、`not_equals`、`includes`、`not_includes`
+- 隐藏字段自动退出必填校验、提交结果和摘要
 
 ## 环境要求
 
@@ -194,7 +196,7 @@ plan/         初始开发规格
 
 ## 当前阶段边界
 
-Phase 7 已完成模板发现、参数化模板生成和四类高频个人模板。当前版本仍不接受模型提供的 HTML、JavaScript、CSS 或外部 URL。
+Phase 8 已完成安全条件控件和实验模板中的“消融实验 → 消融变量”联动。当前版本仍不接受模型提供的 HTML、JavaScript、CSS、表达式或外部 URL。
 
 ## 提交结果状态
 

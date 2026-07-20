@@ -51,7 +51,8 @@ describe("MCP tool descriptors", () => {
         defaultEnvironments: ["cartpole"],
         defaultBudget: 80,
         defaultSeedCount: 8,
-        defaultAblation: true
+        defaultAblation: true,
+        defaultAblationVariables: ["network_architecture"]
       }
     });
 
@@ -63,8 +64,24 @@ describe("MCP tool descriptors", () => {
         expect.objectContaining({ id: "environments", defaultValue: ["cartpole"] }),
         expect.objectContaining({ id: "training_budget", defaultValue: 80 }),
         expect.objectContaining({ id: "seed_count", defaultValue: 8 }),
-        expect.objectContaining({ id: "ablation", defaultValue: true })
+        expect.objectContaining({ id: "ablation", defaultValue: true }),
+        expect.objectContaining({
+          id: "ablation_variables",
+          defaultValue: ["network_architecture"],
+          visibleWhen: { controlId: "ablation", operator: "equals", value: true }
+        })
       ])
     });
+  });
+
+  it("publishes conditional-control fields through tools/list", async () => {
+    const client = await connectedClient();
+    const result = await client.listTools();
+    const customTool = result.tools.find((candidate) => candidate.name === "render_interaction");
+    const templateTool = result.tools.find((candidate) => candidate.name === "render_interaction_template");
+
+    expect(JSON.stringify(customTool?.inputSchema)).toContain('"visibleWhen"');
+    expect(templateTool?.inputSchema.properties).toHaveProperty("ablationVariableOptions");
+    expect(templateTool?.inputSchema.properties).toHaveProperty("defaultAblationVariables");
   });
 });

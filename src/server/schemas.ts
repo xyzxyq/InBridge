@@ -9,6 +9,37 @@ export const idSchema = z
 const labelSchema = z.string().min(1).max(120);
 const descriptionSchema = z.string().max(400).optional();
 
+export const visibilityConditionSchema = z.discriminatedUnion("operator", [
+  z
+    .object({
+      controlId: idSchema,
+      operator: z.literal("equals"),
+      value: z.union([z.string().max(120), z.number().finite(), z.boolean()])
+    })
+    .strict(),
+  z
+    .object({
+      controlId: idSchema,
+      operator: z.literal("not_equals"),
+      value: z.union([z.string().max(120), z.number().finite(), z.boolean()])
+    })
+    .strict(),
+  z
+    .object({
+      controlId: idSchema,
+      operator: z.literal("includes"),
+      value: z.string().min(1).max(120)
+    })
+    .strict(),
+  z
+    .object({
+      controlId: idSchema,
+      operator: z.literal("not_includes"),
+      value: z.string().min(1).max(120)
+    })
+    .strict()
+]);
+
 export const optionSchema = z
   .object({
     label: labelSchema,
@@ -20,7 +51,8 @@ const sharedControlFields = {
   id: idSchema,
   label: labelSchema,
   description: descriptionSchema,
-  required: z.boolean().optional().default(false)
+  required: z.boolean().optional().default(false),
+  visibleWhen: visibilityConditionSchema.optional()
 };
 
 export const radioControlSchema = z
@@ -177,6 +209,67 @@ export const interactionConfigSchema = z
     }
 
     config.controls.forEach((control, index) => {
+      if (control.visibleWhen) {
+        const sourceIndex = config.controls.findIndex((candidate) => candidate.id === control.visibleWhen?.controlId);
+        const source = config.controls[sourceIndex];
+
+        if (sourceIndex < 0) {
+          ctx.addIssue({
+            code: "custom",
+            message: `visibleWhen references unknown control: ${control.visibleWhen.controlId}`,
+            path: ["controls", index, "visibleWhen", "controlId"]
+          });
+        } else if (sourceIndex >= index || !source) {
+          ctx.addIssue({
+            code: "custom",
+            message: "visibleWhen must reference an earlier control",
+            path: ["controls", index, "visibleWhen", "controlId"]
+          });
+        } else {
+          const condition = control.visibleWhen;
+          const isMembership = condition.operator === "includes" || condition.operator === "not_includes";
+
+          if (isMembership && source.type !== "checkbox_group") {
+            ctx.addIssue({
+              code: "custom",
+              message: `${condition.operator} requires a checkbox_group source`,
+              path: ["controls", index, "visibleWhen", "operator"]
+            });
+          } else if (!isMembership && source.type === "checkbox_group") {
+            ctx.addIssue({
+              code: "custom",
+              message: `${condition.operator} cannot compare a checkbox_group source`,
+              path: ["controls", index, "visibleWhen", "operator"]
+            });
+          } else {
+            const expectedType =
+              source.type === "switch"
+                ? "boolean"
+                : source.type === "range" || source.type === "number"
+                  ? "number"
+                  : "string";
+            if (!isMembership && typeof condition.value !== expectedType) {
+              ctx.addIssue({
+                code: "custom",
+                message: `visibleWhen value must be a ${expectedType}`,
+                path: ["controls", index, "visibleWhen", "value"]
+              });
+            }
+
+            if (
+              (source.type === "radio" || source.type === "select" || source.type === "checkbox_group") &&
+              !source.options.some((option) => option.value === condition.value)
+            ) {
+              ctx.addIssue({
+                code: "custom",
+                message: "visibleWhen value must match a source option",
+                path: ["controls", index, "visibleWhen", "value"]
+              });
+            }
+          }
+        }
+      }
+
       if (control.type === "radio" || control.type === "select") {
         const values = validateOptions(control, index, ctx);
         if (control.defaultValue !== undefined && !values.includes(control.defaultValue)) {

@@ -87,7 +87,7 @@ describe("interaction templates", () => {
       note: "优先保证创新性"
     });
 
-    expect(interaction.controls).toHaveLength(8);
+    expect(interaction.controls).toHaveLength(9);
     expect(interaction.controls.map((control) => control.id)).toEqual([
       "research_direction",
       "environments",
@@ -95,10 +95,25 @@ describe("interaction templates", () => {
       "training_budget",
       "seed_count",
       "ablation",
+      "ablation_variables",
       "primary_color",
       "note"
     ]);
+    expect(interaction.controls[6]).toMatchObject({
+      id: "ablation_variables",
+      visibleWhen: { controlId: "ablation", operator: "equals", value: true }
+    });
     expect(interaction.preview).toMatchObject({ type: "summary", title: "实验配置摘要" });
+  });
+
+  it("rejects unknown default ablation variables", () => {
+    expect(() =>
+      interactionTemplateRequestSchema.parse({
+        templateId: "experiment_config",
+        interactionId: "bad_ablation",
+        defaultAblationVariables: ["missing"]
+      })
+    ).toThrow(/must match ablation variable options/);
   });
 
   it("builds a theme interaction with a live theme-card preview", () => {

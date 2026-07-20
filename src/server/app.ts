@@ -9,7 +9,7 @@ export function configureHttpApp(app: Express) {
   app.use(express.json({ limit: "64kb" }));
 
   app.get("/health", (_request, response) => {
-    response.json({ status: "ok", service: "inbridge", version: "0.7.1" });
+    response.json({ status: "ok", service: "inbridge", version: "0.8.0" });
   });
 
   app.post("/mcp", async (request, response) => {

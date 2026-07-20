@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:," />
+    <title>InBridge conditional-control host fixture</title>
+    <style>
+      body { margin: 24px; font-family: system-ui, sans-serif; }
+      iframe { width: min(100%, 900px); height: 900px; border: 0; }
+      pre { max-width: 900px; padding: 12px; overflow: auto; background: #f3f4f6; }
+    </style>
+  </head>
+  <body>
+    <h1>Conditional control host</h1>
+    <iframe title="InBridge widget" src="/tests/fixtures/widget.html"></iframe>
+    <h2>Last model context</h2>
+    <pre data-context>Not submitted</pre>
+    <script>
+      const frame = document.querySelector("iframe");
+      const output = document.querySelector("[data-context]");
+      const structuredContent = {
+        interactionId: "conditional_browser_check",
+        title: "配置消融实验",
+        controls: [
+          { id: "ablation", type: "switch", label: "消融实验", required: false, defaultValue: true },
+          {
+            id: "ablation_variables",
+            type: "checkbox_group",
+            label: "消融变量",
+            required: false,
+            options: [
+              { label: "Network architecture", value: "network_architecture" },
+              { label: "Reward shaping", value: "reward_shaping" }
+            ],
+            defaultValue: ["network_architecture"],
+            visibleWhen: { controlId: "ablation", operator: "equals", value: true }
+          },
+          { id: "budget", type: "range", label: "训练预算", required: false, min: 0, max: 100, step: 5, defaultValue: 80, showValue: true }
+        ],
+        submitLabel: "确认配置",
+        preview: { type: "summary", title: "配置摘要" }
+      };
+
+      function reply(id, result) {
+        frame.contentWindow.postMessage({ jsonrpc: "2.0", id, result }, "*");
+      }
+
+      window.addEventListener("message", (event) => {
+        if (event.source !== frame.contentWindow || event.data?.jsonrpc !== "2.0") return;
+        const message = event.data;
+        if (message.method === "ui/initialize") {
+          reply(message.id, {
+            protocolVersion: message.params.protocolVersion,
+            hostInfo: { name: "inbridge-browser-fixture", version: "1.0.0" },
+            hostCapabilities: { updateModelContext: { structuredContent: {} }, message: { text: {} } },
+            hostContext: { theme: "light", locale: "zh-CN", platform: "web" }
+          });
+          return;
+        }
+        if (message.method === "ui/notifications/initialized") {
+          frame.contentWindow.postMessage({
+            jsonrpc: "2.0",
+            method: "ui/notifications/tool-result",
+            params: { content: [], structuredContent }
+          }, "*");
+          return;
+        }
+        if (message.method === "ui/update-model-context") {
+          output.textContent = JSON.stringify(message.params.structuredContent, null, 2);
+          reply(message.id, {});
+          return;
+        }
+        if (message.method === "ui/message") {
+          reply(message.id, {});
+        }
+      });
+    </script>
+  </body>
+</html>

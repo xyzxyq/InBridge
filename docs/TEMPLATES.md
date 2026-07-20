@@ -51,12 +51,32 @@
   "defaultBudget": 80,
   "defaultSeedCount": 8,
   "defaultAblation": true,
+  "defaultAblationVariables": ["network_architecture", "reward_shaping"],
   "primaryColor": "#9767A9",
   "note": "优先保证实验创新性和可复现性"
 }
 ```
 
-可以通过 `directionOptions` 和 `environmentOptions` 替换默认候选项。默认值必须引用候选项中已存在的 `value`。
+可以通过 `directionOptions`、`environmentOptions` 和 `ablationVariableOptions` 替换默认候选项。默认值必须引用候选项中已存在的 `value`。只有开启消融实验时才显示“消融变量”；关闭后该字段不会参与校验、摘要或提交结果。
+
+## 条件控件
+
+底层 `render_interaction` 允许控件通过 `visibleWhen` 引用一个前置控件：
+
+```json
+{
+  "id": "details",
+  "type": "text",
+  "label": "补充细节",
+  "visibleWhen": {
+    "controlId": "enabled",
+    "operator": "equals",
+    "value": true
+  }
+}
+```
+
+`equals` 和 `not_equals` 用于标量控件，`includes` 和 `not_includes` 仅用于多选控件。条件只能引用更早出现的控件，服务端会拒绝循环、未知引用和类型不匹配。
 
 ## theme_config
 
