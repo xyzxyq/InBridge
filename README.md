@@ -26,6 +26,9 @@ Phase 1 的最小真实闭环已经通过 ChatGPT Developer Mode 人工验收：
 - 根据 Host capabilities 检测上下文更新与消息能力
 - 自动提交失败后可重试同一份冻结结果，不会重复读取或篡改表单值
 - 取消结果使用独立消息，并始终清空未确认值
+- 请求级 `X-Request-Id`、结构化生产日志和安全错误响应
+- 64kb 请求上限、安全响应头与 Vercel `/mcp` IP 限流
+- GitHub CI 发布门禁和每 6 小时生产全链路监控
 
 ## 环境要求
 
@@ -45,6 +48,8 @@ Phase 1 的最小真实闭环已经通过 ChatGPT Developer Mode 人工验收：
 ```bash
 vercel --prod
 ```
+
+生产监控、日志排查与回滚方法见 [`docs/OPERATIONS.md`](docs/OPERATIONS.md)。
 
 ## 本地运行
 
@@ -184,7 +189,7 @@ plan/         初始开发规格
 
 ## 当前阶段边界
 
-Phase 5 已完成固定 HTTPS 域名、Vercel 生产部署、生产 MCP 烟雾测试和 GitHub 自动部署连接。当前版本仍不接受模型提供的 HTML、JavaScript、CSS 或外部 URL。
+Phase 6 已完成请求追踪、结构化日志、安全错误边界、平台限流、CI 门禁、定时生产监控与回滚手册。当前版本仍不接受模型提供的 HTML、JavaScript、CSS 或外部 URL。
 
 ## 提交结果状态
 
