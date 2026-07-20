@@ -113,7 +113,7 @@ const rootElement = document.querySelector<HTMLElement>("#app");
 if (!rootElement) throw new Error("Missing #app root");
 const root: HTMLElement = rootElement;
 
-const bridge = new App({ name: "inbridge-widget", version: "0.4.0" });
+const bridge = new App({ name: "inbridge-widget", version: "0.5.0" });
 let interaction: Interaction | undefined;
 let completed = false;
 let submissionInProgress = false;

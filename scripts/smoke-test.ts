@@ -7,15 +7,18 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const port = 3100 + Math.floor(Math.random() * 500);
-const baseUrl = `http://127.0.0.1:${port}`;
-const server = spawn(process.execPath, [path.join(projectRoot, "dist/server/index.js")], {
-  cwd: projectRoot,
-  env: { ...process.env, PORT: String(port) },
-  stdio: ["ignore", "pipe", "pipe"]
-});
+const remoteBaseUrl = process.env.INBRIDGE_BASE_URL?.replace(/\/$/, "");
+const baseUrl = remoteBaseUrl ?? `http://127.0.0.1:${port}`;
+const server = remoteBaseUrl
+  ? undefined
+  : spawn(process.execPath, [path.join(projectRoot, "dist/server/index.js")], {
+      cwd: projectRoot,
+      env: { ...process.env, PORT: String(port) },
+      stdio: ["ignore", "pipe", "pipe"]
+    });
 
 let stderr = "";
-server.stderr.on("data", (chunk) => {
+server?.stderr?.on("data", (chunk) => {
   stderr += String(chunk);
 });
 
@@ -32,7 +35,7 @@ async function waitForHealth(): Promise<void> {
   throw new Error(`Server did not become healthy. ${stderr}`);
 }
 
-const client = new Client({ name: "inbridge-smoke-test", version: "0.4.0" });
+const client = new Client({ name: "inbridge-smoke-test", version: "0.5.0" });
 
 try {
   await waitForHealth();
@@ -99,14 +102,18 @@ try {
   assert.equal((result.structuredContent as { interactionId?: string })?.interactionId, "smoke_choice");
   assert.equal((result.structuredContent as { controls?: unknown[] })?.controls?.length, 8);
 
-  const resource = await client.readResource({ uri: "ui://inbridge/interaction-v4.html" });
+  const resource = await client.readResource({ uri: "ui://inbridge/interaction-v5.html" });
   const widget = resource.contents[0];
   assert(widget);
   assert.equal(widget.mimeType, "text/html;profile=mcp-app");
   assert("text" in widget && widget.text.includes("<script>") && widget.text.length > 1_000);
+  assert.equal(
+    (widget._meta as { ui?: { domain?: string } } | undefined)?.ui?.domain,
+    "https://mcp.example.com"
+  );
 
   console.log("Smoke test passed: health, tools/list, tools/call, and resources/read are operational.");
 } finally {
   await client.close().catch(() => undefined);
-  server.kill();
+  server?.kill();
 }

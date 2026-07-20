@@ -31,7 +31,20 @@ Phase 1 的最小真实闭环已经通过 ChatGPT Developer Mode 人工验收：
 
 - Node.js 22 或更高版本
 - npm 11 或兼容版本
-- 如需连接 ChatGPT：可访问 Developer Mode，并准备一个 HTTPS tunnel
+- 如需连接 ChatGPT：可访问 Developer Mode
+
+## 生产服务
+
+当前稳定部署地址：
+
+- 健康检查：`https://mcp.example.com/health`
+- MCP endpoint：`https://mcp.example.com/mcp`
+
+服务部署在 Vercel Express Functions，代码仓库已与 Vercel 项目连接。发布生产版本：
+
+```bash
+vercel --prod
+```
 
 ## 本地运行
 
@@ -72,6 +85,13 @@ npm run build
 npm run smoke
 ```
 
+也可以让同一套烟雾测试直接核验生产服务：
+
+```powershell
+$env:INBRIDGE_BASE_URL = "https://mcp.example.com"
+npm run smoke
+```
+
 烟雾测试会临时启动编译后的服务器，并真实执行：
 
 - `GET /health`
@@ -82,12 +102,11 @@ npm run smoke
 
 ## 接入 ChatGPT Developer Mode
 
-1. 本地完成 `npm run build && npm start`。
-2. 使用 Secure MCP Tunnel、ngrok 或 Cloudflare Tunnel 暴露 `http://localhost:3000`。
-3. 在 ChatGPT 中打开 **Settings → Security and login → Developer mode**。
-4. 前往 **Settings → Plugins**，创建 developer-mode app。
-5. MCP server URL 填写 `https://<你的域名>/mcp`。
-6. 新建对话并启用 InBridge，然后明确要求：
+1. 在 ChatGPT 中打开 **Settings → Security and login → Developer mode**。
+2. 前往 **Settings → Plugins**，创建或编辑 InBridge developer-mode app。
+3. MCP server URL 填写 `https://mcp.example.com/mcp`。
+4. 保存并刷新应用配置。
+5. 新建对话并启用 InBridge，然后明确要求：
 
 ```text
 请使用 InBridge 的 render_interaction，让我从方案 A、B、C 中选择一个。
@@ -165,7 +184,7 @@ plan/         初始开发规格
 
 ## 当前阶段边界
 
-Phase 4 已完成能力检测、提交重试、降级通道、取消语义和重复提交保护。当前版本仍不接受模型提供的 HTML、JavaScript、CSS 或外部 URL。
+Phase 5 已完成固定 HTTPS 域名、Vercel 生产部署、生产 MCP 烟雾测试和 GitHub 自动部署连接。当前版本仍不接受模型提供的 HTML、JavaScript、CSS 或外部 URL。
 
 ## 提交结果状态
 
