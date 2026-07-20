@@ -192,6 +192,44 @@ export const interactionTemplateRequestSchema = z
     }
   });
 
+// MCP's tools/list exporter requires a plain object shape. Keep this schema
+// discoverable for model-generated arguments, then apply the stricter
+// discriminated-union validation above inside the tool callback.
+export const interactionTemplateToolInputSchema = z
+  .object({
+    templateId: templateIdSchema.describe("Named interaction template to render"),
+    interactionId: sharedFields.interactionId,
+    title: sharedFields.title,
+    description: sharedFields.description,
+    submitLabel: sharedFields.submitLabel,
+    cancelLabel: z.string().min(1).max(60).optional(),
+    mode: z.enum(["single", "multiple"]).optional(),
+    fieldLabel: z.string().min(1).max(120).optional(),
+    options: z.array(optionSchema).min(2).max(50).optional(),
+    defaultValues: z.array(z.string().min(1).max(120)).max(50).optional(),
+    required: z.boolean().optional(),
+    summaryTitle: z.string().min(1).max(120).optional(),
+    confirmLabel: z.string().min(1).max(120).optional(),
+    rejectLabel: z.string().min(1).max(120).optional(),
+    defaultDecision: z.enum(["confirm", "reject"]).optional(),
+    directionOptions: z.array(optionSchema).min(2).max(20).optional(),
+    environmentOptions: z.array(optionSchema).min(1).max(30).optional(),
+    defaultDirection: z.string().min(1).max(120).optional(),
+    defaultEnvironments: z.array(z.string().min(1).max(120)).max(30).optional(),
+    defaultInformationDensity: z.enum(["low", "medium", "high"]).optional(),
+    defaultBudget: z.number().int().min(0).max(100).optional(),
+    defaultSeedCount: z.number().int().min(1).max(100).optional(),
+    defaultAblation: z.boolean().optional(),
+    primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+    note: z.string().max(2000).optional(),
+    defaultStyle: z.enum(["minimal", "tech", "academic", "business", "magazine"]).optional(),
+    brightness: z.number().int().min(0).max(100).optional(),
+    density: z.enum(["low", "medium", "high"]).optional(),
+    previewTitle: z.string().min(1).max(120).optional(),
+    previewBody: z.string().min(1).max(400).optional()
+  })
+  .strict();
+
 export { normalizedInteractionSchema };
 export type InteractionTemplateRequest = z.input<typeof interactionTemplateRequestSchema>;
 

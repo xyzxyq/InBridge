@@ -12,6 +12,7 @@ import { interactionConfigSchema, normalizedInteractionSchema } from "./schemas.
 import {
   buildInteractionTemplate,
   interactionTemplateRequestSchema,
+  interactionTemplateToolInputSchema,
   TEMPLATE_CATALOG,
   templateCatalogOutputSchema
 } from "./templates.js";
@@ -42,7 +43,7 @@ async function loadWidgetHtml(): Promise<string> {
 
 export function createMcpServer(): McpServer {
   const server = new McpServer(
-    { name: "inbridge", version: "0.7.0" },
+    { name: "inbridge", version: "0.7.1" },
     {
       instructions:
         "Prefer render_interaction_template when decision, confirmation, experiment_config, or theme_config matches the task. Use list_interaction_templates when unsure. Use render_interaction only for novel forms that need custom controls. After rendering, wait for the user to confirm or cancel in the inline panel."
@@ -96,12 +97,13 @@ export function createMcpServer(): McpServer {
       title: "Render an InBridge interaction template",
       description:
         "Render a validated, consistent inline interaction from a named template. Prefer this over render_interaction for common decisions, confirmations, experiment configuration, and theme configuration.",
-      inputSchema: interactionTemplateRequestSchema,
+      inputSchema: interactionTemplateToolInputSchema.shape,
       outputSchema: normalizedInteractionSchema,
       _meta: { ui: { resourceUri: WIDGET_URI } }
     },
     async (input) => {
-      const normalized = buildInteractionTemplate(input);
+      const request = interactionTemplateRequestSchema.parse(input);
+      const normalized = buildInteractionTemplate(request);
       return {
         structuredContent: normalized,
         content: [

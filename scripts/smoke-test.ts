@@ -35,7 +35,7 @@ async function waitForHealth(): Promise<void> {
   throw new Error(`Server did not become healthy. ${stderr}`);
 }
 
-const client = new Client({ name: "inbridge-smoke-test", version: "0.7.0" });
+const client = new Client({ name: "inbridge-smoke-test", version: "0.7.1" });
 
 try {
   await waitForHealth();
