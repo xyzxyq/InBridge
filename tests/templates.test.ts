@@ -94,15 +94,32 @@ describe("interaction templates", () => {
       "information_density",
       "training_budget",
       "seed_count",
-      "ablation",
-      "ablation_variables",
       "primary_color",
-      "note"
+      "note",
+      "ablation",
+      "ablation_variables"
     ]);
-    expect(interaction.controls[6]).toMatchObject({
+    expect(interaction.controls[8]).toMatchObject({
       id: "ablation_variables",
       visibleWhen: { controlId: "ablation", operator: "equals", value: true }
     });
+    expect(interaction.steps).toEqual([
+      {
+        id: "basics",
+        title: "基础信息",
+        controlIds: ["research_direction", "environments", "information_density"]
+      },
+      {
+        id: "training",
+        title: "训练配置",
+        controlIds: ["training_budget", "seed_count", "primary_color", "note"]
+      },
+      {
+        id: "ablation_review",
+        title: "消融与确认",
+        controlIds: ["ablation", "ablation_variables"]
+      }
+    ]);
     expect(interaction.preview).toMatchObject({ type: "summary", title: "实验配置摘要" });
   });
 

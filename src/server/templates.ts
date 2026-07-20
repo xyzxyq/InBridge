@@ -44,7 +44,7 @@ export const TEMPLATE_CATALOG: z.output<typeof templateCatalogEntrySchema>[] = [
   {
     id: "experiment_config",
     title: "实验配置",
-    description: "生成研究方向、实验环境、训练预算、随机种子、消融实验和备注配置。",
+    description: "通过三步向导配置研究方向、训练参数、消融实验并在最终确认前汇总。",
     bestFor: ["机器学习实验", "论文实验设计", "训练参数确认"],
     requiredParameters: ["interactionId"]
   },
@@ -380,6 +380,19 @@ export function buildInteractionTemplate(input: InteractionTemplateRequest): Nor
             defaultValue: request.defaultSeedCount
           },
           {
+            id: "primary_color",
+            type: "color",
+            label: "图表主色",
+            defaultValue: request.primaryColor
+          },
+          {
+            id: "note",
+            type: "text",
+            label: "补充说明",
+            placeholder: "例如：确保高质量创新性",
+            ...(request.note === undefined ? {} : { defaultValue: request.note })
+          },
+          {
             id: "ablation",
             type: "switch",
             label: "消融实验",
@@ -392,19 +405,23 @@ export function buildInteractionTemplate(input: InteractionTemplateRequest): Nor
             options: request.ablationVariableOptions,
             defaultValue: request.defaultAblationVariables,
             visibleWhen: { controlId: "ablation", operator: "equals", value: true }
+          }
+        ],
+        steps: [
+          {
+            id: "basics",
+            title: "基础信息",
+            controlIds: ["research_direction", "environments", "information_density"]
           },
           {
-            id: "primary_color",
-            type: "color",
-            label: "图表主色",
-            defaultValue: request.primaryColor
+            id: "training",
+            title: "训练配置",
+            controlIds: ["training_budget", "seed_count", "primary_color", "note"]
           },
           {
-            id: "note",
-            type: "text",
-            label: "补充说明",
-            placeholder: "例如：确保高质量创新性",
-            ...(request.note === undefined ? {} : { defaultValue: request.note })
+            id: "ablation_review",
+            title: "消融与确认",
+            controlIds: ["ablation", "ablation_variables"]
           }
         ],
         submitLabel: request.submitLabel ?? "确认实验配置",
