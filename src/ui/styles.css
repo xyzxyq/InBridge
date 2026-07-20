@@ -175,6 +175,103 @@ legend {
   accent-color: #2563eb;
 }
 
+.comparison-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.comparison-card {
+  position: relative;
+  display: block;
+  min-width: 0;
+  border: 1px solid light-dark(#d8d8d8, #505050);
+  border-radius: 12px;
+  background: light-dark(#fff, #292929);
+  cursor: pointer;
+}
+
+.comparison-card input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.comparison-card:has(input:checked) {
+  border-color: light-dark(#202123, #ececf1);
+  background: light-dark(#f3f4f6, #353535);
+  box-shadow: inset 0 0 0 1px light-dark(#202123, #ececf1);
+}
+
+.comparison-card:focus-within {
+  outline: 2px solid #4f7cff;
+  outline-offset: 2px;
+}
+
+.comparison-card-content {
+  display: flex;
+  min-height: 100%;
+  padding: 14px;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.comparison-badge {
+  margin-bottom: 8px;
+  padding: 3px 7px;
+  border: 1px solid light-dark(#cfd5dc, #5a6068);
+  border-radius: 999px;
+  color: light-dark(#4b5563, #d1d5db);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.comparison-title {
+  font-size: 0.98rem;
+  line-height: 1.35;
+}
+
+.comparison-description {
+  margin-top: 6px;
+  color: light-dark(#5f6368, #b5b5b5);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.comparison-list {
+  width: 100%;
+  margin-top: 12px;
+}
+
+.comparison-list h4 {
+  margin: 0 0 4px;
+  font-size: 0.75rem;
+}
+
+.comparison-list ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.comparison-selection {
+  margin-top: auto;
+  padding-top: 14px;
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.comparison-card[data-selected="true"] .comparison-selection {
+  color: light-dark(#176b36, #70d994);
+}
+
+fieldset.comparison-control[data-invalid="true"] legend {
+  color: #c9342f;
+}
+
 select,
 input[type="text"],
 input[type="number"] {
@@ -469,6 +566,10 @@ button:disabled {
 }
 
 @media (max-width: 559px) {
+  .comparison-grid {
+    grid-template-columns: 1fr;
+  }
+
   .wizard-steps {
     grid-template-columns: 1fr;
   }

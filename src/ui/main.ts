@@ -1,5 +1,6 @@
 import { App } from "@modelcontextprotocol/ext-apps";
 import { deliverInteractionResult } from "./bridge";
+import { comparisonSelectionText } from "./comparison";
 import { createInteractionResult, type InteractionResult } from "./result";
 import {
   resolveVisibleControlIds,
@@ -84,6 +85,21 @@ interface ColorControl extends BaseControl {
   defaultValue: string;
 }
 
+interface ComparisonCardOption {
+  value: string;
+  title: string;
+  description?: string;
+  badge?: string;
+  pros: string[];
+  cons: string[];
+}
+
+interface ComparisonCardsControl extends BaseControl {
+  type: "comparison_cards";
+  options: ComparisonCardOption[];
+  defaultValue?: string;
+}
+
 type Control =
   | RadioControl
   | CheckboxGroupControl
@@ -92,7 +108,8 @@ type Control =
   | TextControl
   | NumberControl
   | SwitchControl
-  | ColorControl;
+  | ColorControl
+  | ComparisonCardsControl;
 
 interface ThemeCardPreview {
   type: "theme_card";
@@ -169,7 +186,7 @@ function readControlValue(control: Control): VisibilityValue | undefined {
   const container = controlContainer(control.id);
   if (!container) return undefined;
 
-  if (control.type === "radio") {
+  if (control.type === "radio" || control.type === "comparison_cards") {
     return container.querySelector<HTMLInputElement>('input[type="radio"]:checked')?.value ?? "";
   }
   if (control.type === "checkbox_group") {
@@ -371,6 +388,89 @@ function createChoiceGroup(control: RadioControl | CheckboxGroupControl): HTMLEl
     choices.append(label);
   }
   fieldset.append(choices);
+  return fieldset;
+}
+
+function appendComparisonList(container: HTMLElement, titleText: string, items: string[]): void {
+  if (items.length === 0) return;
+  const section = document.createElement("section");
+  section.className = "comparison-list";
+  const title = document.createElement("h4");
+  title.textContent = titleText;
+  const list = document.createElement("ul");
+  items.forEach((item) => {
+    const entry = document.createElement("li");
+    entry.textContent = item;
+    list.append(entry);
+  });
+  section.append(title, list);
+  container.append(section);
+}
+
+function refreshComparisonSelection(container: HTMLElement): void {
+  container.querySelectorAll<HTMLElement>("[data-comparison-option]").forEach((card) => {
+    const input = card.querySelector<HTMLInputElement>('input[type="radio"]');
+    const status = card.querySelector<HTMLElement>("[data-comparison-selection]");
+    const selected = input?.checked ?? false;
+    card.dataset.selected = String(selected);
+    if (status) status.textContent = comparisonSelectionText(selected);
+  });
+}
+
+function createComparisonCards(control: ComparisonCardsControl): HTMLElement {
+  const fieldset = document.createElement("fieldset");
+  fieldset.className = "comparison-control";
+  fieldset.dataset.controlId = control.id;
+  const legend = document.createElement("legend");
+  legend.textContent = control.required ? `${control.label} *` : control.label;
+  fieldset.append(legend);
+  appendDescription(fieldset, control.description);
+
+  const grid = document.createElement("div");
+  grid.className = "comparison-grid";
+  for (const option of control.options) {
+    const card = document.createElement("label");
+    card.className = "comparison-card";
+    card.dataset.comparisonOption = option.value;
+    const input = document.createElement("input");
+    input.type = "radio";
+    input.name = control.id;
+    input.value = option.value;
+    input.checked = option.value === control.defaultValue;
+    input.addEventListener("change", () => {
+      refreshComparisonSelection(grid);
+      handleControlChange(control.id);
+    });
+
+    const content = document.createElement("span");
+    content.className = "comparison-card-content";
+    if (option.badge) {
+      const badge = document.createElement("span");
+      badge.className = "comparison-badge";
+      badge.textContent = option.badge;
+      content.append(badge);
+    }
+    const title = document.createElement("strong");
+    title.className = "comparison-title";
+    title.textContent = option.title;
+    content.append(title);
+    if (option.description) {
+      const description = document.createElement("span");
+      description.className = "comparison-description";
+      description.textContent = option.description;
+      content.append(description);
+    }
+    appendComparisonList(content, "优势", option.pros);
+    appendComparisonList(content, "限制", option.cons);
+    const selection = document.createElement("span");
+    selection.className = "comparison-selection";
+    selection.dataset.comparisonSelection = "";
+    content.append(selection);
+    card.append(input, content);
+    grid.append(card);
+  }
+  fieldset.append(grid);
+  refreshComparisonSelection(grid);
   return fieldset;
 }
 
@@ -667,8 +767,9 @@ function render(config: Interaction): void {
   });
 
   for (const control of config.controls) {
-    const element =
-      control.type === "radio" || control.type === "checkbox_group"
+    const element = control.type === "comparison_cards"
+      ? createComparisonCards(control)
+      : control.type === "radio" || control.type === "checkbox_group"
         ? createChoiceGroup(control)
         : createField(control);
     if (config.steps) element.dataset.stepIndex = String(controlStepIndex(config.steps, control.id));
