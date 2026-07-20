@@ -1,0 +1,417 @@
+import { z } from "zod";
+import { normalizeInteraction } from "./normalize.js";
+import {
+  idSchema,
+  normalizedInteractionSchema,
+  optionSchema,
+  type InteractionConfig,
+  type NormalizedInteraction
+} from "./schemas.js";
+
+export const templateIdSchema = z.enum(["decision", "confirmation", "experiment_config", "theme_config"]);
+
+export const templateCatalogEntrySchema = z
+  .object({
+    id: templateIdSchema,
+    title: z.string(),
+    description: z.string(),
+    bestFor: z.array(z.string()),
+    requiredParameters: z.array(z.string())
+  })
+  .strict();
+
+export const templateCatalogOutputSchema = z
+  .object({
+    templates: z.array(templateCatalogEntrySchema)
+  })
+  .strict();
+
+export const TEMPLATE_CATALOG: z.output<typeof templateCatalogEntrySchema>[] = [
+  {
+    id: "decision",
+    title: "方案决策",
+    description: "根据给定选项生成单选或多选决策面板，并显示提交前摘要。",
+    bestFor: ["方案选择", "候选项筛选", "多项偏好收集"],
+    requiredParameters: ["interactionId", "options"]
+  },
+  {
+    id: "confirmation",
+    title: "确认与拒绝",
+    description: "生成明确的确认、拒绝和取消交互，避免把未确认内容当作授权。",
+    bestFor: ["执行前确认", "风险审批", "接受或拒绝建议"],
+    requiredParameters: ["interactionId", "title"]
+  },
+  {
+    id: "experiment_config",
+    title: "实验配置",
+    description: "生成研究方向、实验环境、训练预算、随机种子、消融实验和备注配置。",
+    bestFor: ["机器学习实验", "论文实验设计", "训练参数确认"],
+    requiredParameters: ["interactionId"]
+  },
+  {
+    id: "theme_config",
+    title: "主题配置",
+    description: "生成颜色、亮度、密度和视觉风格参数，并提供安全实时预览。",
+    bestFor: ["图表主题", "界面主题", "视觉风格确认"],
+    requiredParameters: ["interactionId"]
+  }
+];
+
+const sharedFields = {
+  interactionId: idSchema.describe("Stable id used to correlate the submitted result"),
+  title: z.string().min(1).max(120).optional(),
+  description: z.string().max(800).optional(),
+  submitLabel: z.string().min(1).max(60).optional(),
+  cancelLabel: z.string().min(1).max(60).optional().default("取消")
+};
+
+const decisionTemplateSchema = z
+  .object({
+    templateId: z.literal("decision"),
+    ...sharedFields,
+    mode: z.enum(["single", "multiple"]).optional().default("single"),
+    fieldLabel: z.string().min(1).max(120).optional().default("方案"),
+    options: z.array(optionSchema).min(2).max(50),
+    defaultValues: z.array(z.string().min(1).max(120)).max(50).optional().default([]),
+    required: z.boolean().optional().default(true),
+    summaryTitle: z.string().min(1).max(120).optional().default("当前选择")
+  })
+  .strict();
+
+const confirmationTemplateSchema = z
+  .object({
+    templateId: z.literal("confirmation"),
+    ...sharedFields,
+    title: z.string().min(1).max(120),
+    fieldLabel: z.string().min(1).max(120).optional().default("决定"),
+    confirmLabel: z.string().min(1).max(120).optional().default("确认"),
+    rejectLabel: z.string().min(1).max(120).optional().default("拒绝"),
+    defaultDecision: z.enum(["confirm", "reject"]).optional()
+  })
+  .strict();
+
+const defaultDirections = [
+  { label: "强化学习", value: "rl" },
+  { label: "多智能体强化学习", value: "marl" }
+];
+
+const defaultEnvironments = [
+  { label: "CartPole", value: "cartpole" },
+  { label: "LunarLander", value: "lunar_lander" },
+  { label: "Atari", value: "atari" }
+];
+
+const experimentTemplateSchema = z
+  .object({
+    templateId: z.literal("experiment_config"),
+    ...sharedFields,
+    directionOptions: z.array(optionSchema).min(2).max(20).optional().default(defaultDirections),
+    environmentOptions: z.array(optionSchema).min(1).max(30).optional().default(defaultEnvironments),
+    defaultDirection: z.string().min(1).max(120).optional(),
+    defaultEnvironments: z.array(z.string().min(1).max(120)).max(30).optional().default([]),
+    defaultInformationDensity: z.enum(["low", "medium", "high"]).optional().default("medium"),
+    defaultBudget: z.number().int().min(0).max(100).optional().default(80),
+    defaultSeedCount: z.number().int().min(1).max(100).optional().default(8),
+    defaultAblation: z.boolean().optional().default(true),
+    primaryColor: z
+      .string()
+      .regex(/^#[0-9A-Fa-f]{6}$/)
+      .optional()
+      .default("#2563EB"),
+    note: z.string().max(2000).optional()
+  })
+  .strict();
+
+const themeTemplateSchema = z
+  .object({
+    templateId: z.literal("theme_config"),
+    ...sharedFields,
+    defaultStyle: z
+      .enum(["minimal", "tech", "academic", "business", "magazine"])
+      .optional()
+      .default("minimal"),
+    primaryColor: z
+      .string()
+      .regex(/^#[0-9A-Fa-f]{6}$/)
+      .optional()
+      .default("#2563EB"),
+    brightness: z.number().int().min(0).max(100).optional().default(60),
+    density: z.enum(["low", "medium", "high"]).optional().default("medium"),
+    previewTitle: z.string().min(1).max(120).optional().default("示例标题"),
+    previewBody: z.string().min(1).max(400).optional().default("根据参数实时更新的安全主题预览。")
+  })
+  .strict();
+
+export const interactionTemplateRequestSchema = z
+  .discriminatedUnion("templateId", [
+    decisionTemplateSchema,
+    confirmationTemplateSchema,
+    experimentTemplateSchema,
+    themeTemplateSchema
+  ])
+  .superRefine((request, context) => {
+    if (request.templateId === "decision") {
+      const values = request.options.map((option) => option.value);
+      if (new Set(values).size !== values.length) {
+        context.addIssue({ code: "custom", message: "option values must be unique", path: ["options"] });
+      }
+      if (new Set(request.defaultValues).size !== request.defaultValues.length) {
+        context.addIssue({ code: "custom", message: "defaultValues must be unique", path: ["defaultValues"] });
+      }
+      if (request.defaultValues.some((value) => !values.includes(value))) {
+        context.addIssue({ code: "custom", message: "defaultValues must match option values", path: ["defaultValues"] });
+      }
+      if (request.mode === "single" && request.defaultValues.length > 1) {
+        context.addIssue({ code: "custom", message: "single decisions accept at most one default", path: ["defaultValues"] });
+      }
+    }
+
+    if (request.templateId === "experiment_config") {
+      const directionValues = request.directionOptions.map((option) => option.value);
+      const environmentValues = request.environmentOptions.map((option) => option.value);
+      if (new Set(directionValues).size !== directionValues.length) {
+        context.addIssue({ code: "custom", message: "direction option values must be unique", path: ["directionOptions"] });
+      }
+      if (new Set(environmentValues).size !== environmentValues.length) {
+        context.addIssue({ code: "custom", message: "environment option values must be unique", path: ["environmentOptions"] });
+      }
+      if (request.defaultDirection !== undefined && !directionValues.includes(request.defaultDirection)) {
+        context.addIssue({
+          code: "custom",
+          message: "defaultDirection must match a direction option",
+          path: ["defaultDirection"]
+        });
+      }
+      if (request.defaultEnvironments.some((value) => !environmentValues.includes(value))) {
+        context.addIssue({
+          code: "custom",
+          message: "defaultEnvironments must match environment options",
+          path: ["defaultEnvironments"]
+        });
+      }
+    }
+  });
+
+export { normalizedInteractionSchema };
+export type InteractionTemplateRequest = z.input<typeof interactionTemplateRequestSchema>;
+
+function sharedInteraction(request: {
+  interactionId: string;
+  title?: string | undefined;
+  description?: string | undefined;
+  submitLabel?: string | undefined;
+  cancelLabel?: string | undefined;
+}) {
+  return {
+    interactionId: request.interactionId,
+    ...(request.title === undefined ? {} : { title: request.title }),
+    ...(request.description === undefined ? {} : { description: request.description }),
+    ...(request.submitLabel === undefined ? {} : { submitLabel: request.submitLabel }),
+    ...(request.cancelLabel === undefined ? {} : { cancelLabel: request.cancelLabel })
+  };
+}
+
+export function buildInteractionTemplate(input: InteractionTemplateRequest): NormalizedInteraction {
+  const request = interactionTemplateRequestSchema.parse(input);
+  let config: InteractionConfig;
+
+  switch (request.templateId) {
+    case "decision": {
+      const control =
+        request.mode === "single"
+          ? {
+              id: "choice",
+              type: "radio" as const,
+              label: request.fieldLabel,
+              required: request.required,
+              options: request.options,
+              ...(request.defaultValues[0] === undefined ? {} : { defaultValue: request.defaultValues[0] })
+            }
+          : {
+              id: "choices",
+              type: "checkbox_group" as const,
+              label: request.fieldLabel,
+              required: request.required,
+              options: request.options,
+              defaultValue: request.defaultValues
+            };
+      const controlId = request.mode === "single" ? "choice" : "choices";
+      config = {
+        ...sharedInteraction(request),
+        title: request.title ?? (request.mode === "single" ? "请选择一个方案" : "请选择方案"),
+        controls: [control],
+        submitLabel: request.submitLabel ?? "确认选择",
+        preview: { type: "summary", title: request.summaryTitle, bindings: { [request.fieldLabel]: controlId } }
+      };
+      break;
+    }
+    case "confirmation":
+      config = {
+        ...sharedInteraction(request),
+        title: request.title,
+        controls: [
+          {
+            id: "decision",
+            type: "radio",
+            label: request.fieldLabel,
+            required: true,
+            options: [
+              { label: request.confirmLabel, value: "confirm" },
+              { label: request.rejectLabel, value: "reject" }
+            ],
+            ...(request.defaultDecision === undefined ? {} : { defaultValue: request.defaultDecision })
+          }
+        ],
+        submitLabel: request.submitLabel ?? "提交决定"
+      };
+      break;
+    case "experiment_config":
+      config = {
+        ...sharedInteraction(request),
+        title: request.title ?? "配置实验方案",
+        description: request.description ?? "确认后将按这些参数继续设计或执行实验。",
+        controls: [
+          {
+            id: "research_direction",
+            type: "radio",
+            label: "研究方向",
+            required: true,
+            options: request.directionOptions,
+            ...(request.defaultDirection === undefined ? {} : { defaultValue: request.defaultDirection })
+          },
+          {
+            id: "environments",
+            type: "checkbox_group",
+            label: "实验环境",
+            required: true,
+            options: request.environmentOptions,
+            defaultValue: request.defaultEnvironments
+          },
+          {
+            id: "information_density",
+            type: "select",
+            label: "信息密度",
+            options: [
+              { label: "低", value: "low" },
+              { label: "中", value: "medium" },
+              { label: "高", value: "high" }
+            ],
+            defaultValue: request.defaultInformationDensity
+          },
+          {
+            id: "training_budget",
+            type: "range",
+            label: "训练预算",
+            min: 0,
+            max: 100,
+            step: 5,
+            defaultValue: request.defaultBudget
+          },
+          {
+            id: "seed_count",
+            type: "number",
+            label: "随机种子数量",
+            min: 1,
+            max: 100,
+            step: 1,
+            defaultValue: request.defaultSeedCount
+          },
+          {
+            id: "ablation",
+            type: "switch",
+            label: "消融实验",
+            defaultValue: request.defaultAblation
+          },
+          {
+            id: "primary_color",
+            type: "color",
+            label: "图表主色",
+            defaultValue: request.primaryColor
+          },
+          {
+            id: "note",
+            type: "text",
+            label: "补充说明",
+            placeholder: "例如：确保高质量创新性",
+            ...(request.note === undefined ? {} : { defaultValue: request.note })
+          }
+        ],
+        submitLabel: request.submitLabel ?? "确认实验配置",
+        preview: {
+          type: "summary",
+          title: "实验配置摘要",
+          bindings: {
+            研究方向: "research_direction",
+            实验环境: "environments",
+            信息密度: "information_density",
+            训练预算: "training_budget",
+            随机种子数量: "seed_count",
+            消融实验: "ablation",
+            图表主色: "primary_color",
+            补充说明: "note"
+          }
+        }
+      };
+      break;
+    case "theme_config":
+      config = {
+        ...sharedInteraction(request),
+        title: request.title ?? "配置主题",
+        controls: [
+          {
+            id: "style",
+            type: "select",
+            label: "风格",
+            options: [
+              { label: "极简", value: "minimal" },
+              { label: "科技", value: "tech" },
+              { label: "学术", value: "academic" },
+              { label: "商务", value: "business" },
+              { label: "杂志", value: "magazine" }
+            ],
+            defaultValue: request.defaultStyle
+          },
+          {
+            id: "primary_color",
+            type: "color",
+            label: "主色",
+            defaultValue: request.primaryColor
+          },
+          {
+            id: "brightness",
+            type: "range",
+            label: "亮度",
+            min: 0,
+            max: 100,
+            defaultValue: request.brightness
+          },
+          {
+            id: "density",
+            type: "select",
+            label: "密度",
+            options: [
+              { label: "低", value: "low" },
+              { label: "中", value: "medium" },
+              { label: "高", value: "high" }
+            ],
+            defaultValue: request.density
+          }
+        ],
+        submitLabel: request.submitLabel ?? "确认主题",
+        preview: {
+          type: "theme_card",
+          title: request.previewTitle,
+          body: request.previewBody,
+          bindings: {
+            primaryColor: "primary_color",
+            brightness: "brightness",
+            density: "density",
+            style: "style"
+          }
+        }
+      };
+      break;
+  }
+
+  return normalizeInteraction(config);
+}

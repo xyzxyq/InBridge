@@ -29,6 +29,9 @@ Phase 1 的最小真实闭环已经通过 ChatGPT Developer Mode 人工验收：
 - 请求级 `X-Request-Id`、结构化生产日志和安全错误响应
 - 64kb 请求上限、安全响应头与 Vercel `/mcp` IP 限流
 - GitHub CI 发布门禁和每 6 小时生产全链路监控
+- 模板发现工具：`list_interaction_templates`
+- 模板渲染工具：`render_interaction_template`
+- 内置 `decision`、`confirmation`、`experiment_config`、`theme_config` 四个严格模板
 
 ## 环境要求
 
@@ -50,6 +53,8 @@ vercel --prod
 ```
 
 生产监控、日志排查与回滚方法见 [`docs/OPERATIONS.md`](docs/OPERATIONS.md)。
+
+模板参数和调用示例见 [`docs/TEMPLATES.md`](docs/TEMPLATES.md)。
 
 ## 本地运行
 
@@ -189,7 +194,7 @@ plan/         初始开发规格
 
 ## 当前阶段边界
 
-Phase 6 已完成请求追踪、结构化日志、安全错误边界、平台限流、CI 门禁、定时生产监控与回滚手册。当前版本仍不接受模型提供的 HTML、JavaScript、CSS 或外部 URL。
+Phase 7 已完成模板发现、参数化模板生成和四类高频个人模板。当前版本仍不接受模型提供的 HTML、JavaScript、CSS 或外部 URL。
 
 ## 提交结果状态
 

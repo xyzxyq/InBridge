@@ -35,7 +35,7 @@ async function waitForHealth(): Promise<void> {
   throw new Error(`Server did not become healthy. ${stderr}`);
 }
 
-const client = new Client({ name: "inbridge-smoke-test", version: "0.6.0" });
+const client = new Client({ name: "inbridge-smoke-test", version: "0.7.0" });
 
 try {
   await waitForHealth();
@@ -44,6 +44,33 @@ try {
 
   const tools = await client.listTools();
   assert(tools.tools.some((tool) => tool.name === "render_interaction"));
+  assert(tools.tools.some((tool) => tool.name === "list_interaction_templates"));
+  assert(tools.tools.some((tool) => tool.name === "render_interaction_template"));
+
+  const catalogResult = await client.callTool({
+    name: "list_interaction_templates",
+    arguments: {}
+  });
+  const catalog = catalogResult.structuredContent as { templates?: Array<{ id?: string }> } | undefined;
+  assert.deepEqual(
+    catalog?.templates?.map((template) => template.id),
+    ["decision", "confirmation", "experiment_config", "theme_config"]
+  );
+
+  const templateResult = await client.callTool({
+    name: "render_interaction_template",
+    arguments: {
+      templateId: "experiment_config",
+      interactionId: "smoke_experiment",
+      defaultDirection: "marl",
+      defaultEnvironments: ["cartpole"],
+      defaultBudget: 75,
+      defaultSeedCount: 8
+    }
+  });
+  assert.equal(templateResult.isError, undefined);
+  assert.equal((templateResult.structuredContent as { interactionId?: string })?.interactionId, "smoke_experiment");
+  assert.equal((templateResult.structuredContent as { controls?: unknown[] })?.controls?.length, 8);
 
   const result = await client.callTool({
     name: "render_interaction",
@@ -102,7 +129,7 @@ try {
   assert.equal((result.structuredContent as { interactionId?: string })?.interactionId, "smoke_choice");
   assert.equal((result.structuredContent as { controls?: unknown[] })?.controls?.length, 8);
 
-  const resource = await client.readResource({ uri: "ui://inbridge/interaction-v6.html" });
+  const resource = await client.readResource({ uri: "ui://inbridge/interaction-v7.html" });
   const widget = resource.contents[0];
   assert(widget);
   assert.equal(widget.mimeType, "text/html;profile=mcp-app");
@@ -112,7 +139,9 @@ try {
     "https://mcp.example.com"
   );
 
-  console.log("Smoke test passed: health, tools/list, tools/call, and resources/read are operational.");
+  console.log(
+    "Smoke test passed: health, template discovery, template rendering, custom rendering, and resources/read are operational."
+  );
 } finally {
   await client.close().catch(() => undefined);
   server?.kill();
