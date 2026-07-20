@@ -42,4 +42,32 @@ describe("normalizeInteraction", () => {
     });
     expect(normalized.preview).toEqual({ type: "summary", bindings: { Answer: "answer" } });
   });
+
+  it("preserves a validated wizard declaration", () => {
+    const normalized = normalizeInteraction({
+      interactionId: "wizard",
+      title: "Wizard",
+      controls: [
+        {
+          id: "answer",
+          type: "radio",
+          label: "Answer",
+          options: [
+            { label: "A", value: "a" },
+            { label: "B", value: "b" }
+          ]
+        },
+        { id: "note", type: "text", label: "Note" }
+      ],
+      steps: [
+        { id: "choice", title: "Choice", controlIds: ["answer"] },
+        { id: "details", title: "Details", controlIds: ["note"] }
+      ]
+    });
+
+    expect(normalized.steps).toEqual([
+      { id: "choice", title: "Choice", controlIds: ["answer"] },
+      { id: "details", title: "Details", controlIds: ["note"] }
+    ]);
+  });
 });

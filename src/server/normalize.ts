@@ -11,6 +11,7 @@ export function normalizeInteraction(input: InteractionConfig): NormalizedIntera
     controls: parsed.controls,
     submitLabel: parsed.submitLabel ?? "确认并继续",
     ...(parsed.cancelLabel === undefined ? {} : { cancelLabel: parsed.cancelLabel }),
-    ...(parsed.preview === undefined ? {} : { preview: parsed.preview })
+    ...(parsed.preview === undefined ? {} : { preview: parsed.preview }),
+    ...(parsed.steps === undefined ? {} : { steps: parsed.steps })
   };
 }

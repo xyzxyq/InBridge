@@ -179,6 +179,15 @@ export const previewSchema = z.discriminatedUnion("type", [
     .strict()
 ]);
 
+export const interactionStepSchema = z
+  .object({
+    id: idSchema,
+    title: z.string().min(1).max(120),
+    description: z.string().max(400).optional(),
+    controlIds: z.array(idSchema).min(1).max(20)
+  })
+  .strict();
+
 function validateOptions(
   control: { options: Array<{ value: string }> },
   index: number,
@@ -199,13 +208,63 @@ export const interactionConfigSchema = z
     controls: z.array(controlSchema).min(1).max(20),
     submitLabel: z.string().min(1).max(60).optional(),
     cancelLabel: z.string().min(1).max(60).optional(),
-    preview: previewSchema.optional()
+    preview: previewSchema.optional(),
+    steps: z.array(interactionStepSchema).min(2).max(8).optional()
   })
   .strict()
   .superRefine((config, ctx) => {
     const ids = config.controls.map((control) => control.id);
     if (new Set(ids).size !== ids.length) {
       ctx.addIssue({ code: "custom", message: "control ids must be unique", path: ["controls"] });
+    }
+
+    if (config.steps) {
+      const stepIds = config.steps.map((step) => step.id);
+      if (new Set(stepIds).size !== stepIds.length) {
+        ctx.addIssue({ code: "custom", message: "step ids must be unique", path: ["steps"] });
+      }
+
+      const flattened = config.steps.flatMap((step) => step.controlIds);
+      const assignmentCounts = new Map<string, number>();
+      flattened.forEach((controlId) => assignmentCounts.set(controlId, (assignmentCounts.get(controlId) ?? 0) + 1));
+
+      flattened.forEach((controlId, index) => {
+        if (!ids.includes(controlId)) {
+          ctx.addIssue({
+            code: "custom",
+            message: `step references unknown control: ${controlId}`,
+            path: ["steps", index, "controlIds"]
+          });
+        }
+      });
+
+      for (const [controlId, count] of assignmentCounts) {
+        if (count > 1) {
+          ctx.addIssue({
+            code: "custom",
+            message: `control is assigned to more than one step: ${controlId}`,
+            path: ["steps"]
+          });
+        }
+      }
+
+      ids.forEach((controlId) => {
+        if (!assignmentCounts.has(controlId)) {
+          ctx.addIssue({
+            code: "custom",
+            message: `step assignment is missing control: ${controlId}`,
+            path: ["steps"]
+          });
+        }
+      });
+
+      if (flattened.length === ids.length && flattened.some((controlId, index) => controlId !== ids[index])) {
+        ctx.addIssue({
+          code: "custom",
+          message: "steps must preserve control order",
+          path: ["steps"]
+        });
+      }
     }
 
     config.controls.forEach((control, index) => {
@@ -384,7 +443,8 @@ export const normalizedInteractionSchema = z.object({
   controls: z.array(controlSchema),
   submitLabel: z.string(),
   cancelLabel: z.string().optional(),
-  preview: previewSchema.optional()
+  preview: previewSchema.optional(),
+  steps: z.array(interactionStepSchema).optional()
 });
 
 export type InteractionConfig = z.input<typeof interactionConfigSchema>;

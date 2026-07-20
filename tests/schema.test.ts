@@ -263,4 +263,61 @@ describe("interactionConfigSchema", () => {
       })
     ).toThrow(/requires a checkbox_group source/);
   });
+
+  it("accepts ordered steps that assign every control exactly once", () => {
+    const parsed = interactionConfigSchema.parse({
+      ...validConfig,
+      controls: [validConfig.controls[0], { id: "note", type: "text", label: "Note" }],
+      steps: [
+        { id: "choice", title: "Choice", controlIds: ["plan"] },
+        { id: "details", title: "Details", description: "Optional details", controlIds: ["note"] }
+      ]
+    });
+
+    expect(parsed.steps?.map((step) => step.id)).toEqual(["choice", "details"]);
+  });
+
+  it("rejects duplicate step ids", () => {
+    expect(() =>
+      interactionConfigSchema.parse({
+        ...validConfig,
+        controls: [validConfig.controls[0], { id: "note", type: "text", label: "Note" }],
+        steps: [
+          { id: "same", title: "Choice", controlIds: ["plan"] },
+          { id: "same", title: "Details", controlIds: ["note"] }
+        ]
+      })
+    ).toThrow(/step ids must be unique/);
+  });
+
+  it("rejects unknown, duplicate, missing, or reordered step controls", () => {
+    const controls = [validConfig.controls[0], { id: "note", type: "text" as const, label: "Note" }];
+    const parseSteps = (steps: Array<{ id: string; title: string; controlIds: string[] }>) =>
+      interactionConfigSchema.parse({ ...validConfig, controls, steps });
+
+    expect(() =>
+      parseSteps([
+        { id: "choice", title: "Choice", controlIds: ["plan"] },
+        { id: "details", title: "Details", controlIds: ["missing"] }
+      ])
+    ).toThrow(/unknown control/);
+    expect(() =>
+      parseSteps([
+        { id: "choice", title: "Choice", controlIds: ["plan"] },
+        { id: "details", title: "Details", controlIds: ["plan", "note"] }
+      ])
+    ).toThrow(/assigned to more than one step/);
+    expect(() =>
+      parseSteps([
+        { id: "choice", title: "Choice", controlIds: ["plan"] },
+        { id: "details", title: "Details", controlIds: [] }
+      ])
+    ).toThrow();
+    expect(() =>
+      parseSteps([
+        { id: "details", title: "Details", controlIds: ["note"] },
+        { id: "choice", title: "Choice", controlIds: ["plan"] }
+      ])
+    ).toThrow(/must preserve control order/);
+  });
 });
