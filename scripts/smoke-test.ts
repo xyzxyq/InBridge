@@ -32,7 +32,7 @@ async function waitForHealth(): Promise<void> {
   throw new Error(`Server did not become healthy. ${stderr}`);
 }
 
-const client = new Client({ name: "inbridge-smoke-test", version: "0.2.0" });
+const client = new Client({ name: "inbridge-smoke-test", version: "0.3.0" });
 
 try {
   await waitForHealth();
@@ -81,7 +81,17 @@ try {
         { id: "seeds", type: "number", label: "种子数", min: 1, max: 20 },
         { id: "ablation", type: "switch", label: "消融实验" },
         { id: "primary", type: "color", label: "主色" }
-      ]
+      ],
+      preview: {
+        type: "summary",
+        title: "当前配置",
+        bindings: {
+          方案: "plan",
+          方向: "topics",
+          明暗: "brightness",
+          主色: "primary"
+        }
+      }
     }
   });
 
@@ -89,7 +99,7 @@ try {
   assert.equal((result.structuredContent as { interactionId?: string })?.interactionId, "smoke_choice");
   assert.equal((result.structuredContent as { controls?: unknown[] })?.controls?.length, 8);
 
-  const resource = await client.readResource({ uri: "ui://inbridge/interaction-v2.html" });
+  const resource = await client.readResource({ uri: "ui://inbridge/interaction-v3.html" });
   const widget = resource.contents[0];
   assert(widget);
   assert.equal(widget.mimeType, "text/html;profile=mcp-app");

@@ -17,6 +17,7 @@ Phase 1 的最小真实闭环已经通过 ChatGPT Developer Mode 人工验收：
 - 健康检查：`GET /health`
 - 标准 MCP Apps UI resource：`text/html;profile=mcp-app`
 - 严格白名单 schema，支持 radio、checkbox_group、select、range、text、number、switch、color
+- 安全声明式实时预览：theme_card、summary
 - 必填校验与重复提交保护
 - 确认与取消结果
 - `updateModelContext` + `sendMessage` 双通道提交
@@ -128,6 +129,37 @@ plan/         初始开发规格
 
 完整设计见 [`plan/interactive-chat-ui-bridge-development-spec.md`](plan/interactive-chat-ui-bridge-development-spec.md)。
 
+## 预览配置
+
+`summary` 可实时显示全部控件，或通过“显示标签 → control id”绑定选择字段：
+
+```json
+{
+  "type": "summary",
+  "title": "当前配置",
+  "bindings": {
+    "研究方向": "direction",
+    "训练预算": "budget"
+  }
+}
+```
+
+`theme_card` 只接受四种受控绑定：`primaryColor`、`brightness`、`density`、`style`。绑定必须引用类型兼容的现有控件。
+
+```json
+{
+  "type": "theme_card",
+  "title": "示例标题",
+  "body": "根据参数实时更新的安全示例卡片。",
+  "bindings": {
+    "primaryColor": "primary_color",
+    "brightness": "brightness",
+    "density": "density",
+    "style": "style"
+  }
+}
+```
+
 ## 当前阶段边界
 
-Phase 2 已实现全部八种 V1 控件。安全声明式预览（`theme_card`、`summary`）仍属于 Phase 3，当前版本不接受模型提供的 HTML、JavaScript、CSS 或外部 URL。
+Phase 3 已实现全部八种 V1 控件和两种安全预览。当前版本仍不接受模型提供的 HTML、JavaScript、CSS 或外部 URL。

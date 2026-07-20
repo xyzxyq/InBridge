@@ -127,4 +127,65 @@ describe("interactionConfigSchema", () => {
       })
     ).toThrow(/six-digit hex color/);
   });
+
+  it("accepts safe theme-card bindings", () => {
+    const parsed = interactionConfigSchema.parse({
+      interactionId: "theme_preview",
+      title: "Theme preview",
+      controls: [
+        { id: "color", type: "color", label: "Color" },
+        { id: "brightness", type: "range", label: "Brightness", min: 0, max: 100 },
+        {
+          id: "style",
+          type: "select",
+          label: "Style",
+          options: [
+            { label: "Minimal", value: "minimal" },
+            { label: "Tech", value: "tech" }
+          ]
+        }
+      ],
+      preview: {
+        type: "theme_card",
+        bindings: { primaryColor: "color", brightness: "brightness", style: "style" }
+      }
+    });
+
+    expect(parsed.preview?.type).toBe("theme_card");
+  });
+
+  it("accepts summary label-to-control bindings", () => {
+    const parsed = interactionConfigSchema.parse({
+      ...validConfig,
+      preview: { type: "summary", bindings: { "选择结果": "plan" } }
+    });
+    expect(parsed.preview).toMatchObject({ type: "summary", bindings: { "选择结果": "plan" } });
+  });
+
+  it("rejects preview bindings to unknown controls", () => {
+    expect(() =>
+      interactionConfigSchema.parse({
+        ...validConfig,
+        preview: { type: "summary", bindings: { Missing: "does_not_exist" } }
+      })
+    ).toThrow(/references unknown control/);
+  });
+
+  it("rejects incompatible theme bindings", () => {
+    expect(() =>
+      interactionConfigSchema.parse({
+        ...validConfig,
+        preview: { type: "theme_card", bindings: { primaryColor: "plan" } }
+      })
+    ).toThrow(/primaryColor is not compatible with radio/);
+  });
+
+  it("rejects arbitrary markup in preview config", () => {
+    expect(() =>
+      interactionConfigSchema.parse({
+        ...validConfig,
+        preview: { type: "summary", html: "<script>alert(1)</script>" }
+      })
+    ).toThrow();
+  });
 });

@@ -209,6 +209,124 @@ input[type="number"] {
   margin-top: 18px;
 }
 
+.preview {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid light-dark(#e4e4e4, #454545);
+}
+
+.preview h3 {
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.theme-card {
+  --preview-color: #2563eb;
+  position: relative;
+  overflow: hidden;
+  min-height: 150px;
+  border: 1px solid color-mix(in srgb, var(--preview-color) 42%, light-dark(#dedede, #555));
+  background: color-mix(in srgb, var(--preview-color) 8%, light-dark(#fff, #292929));
+  transition: filter 120ms ease, padding 120ms ease, border-radius 120ms ease;
+}
+
+.theme-card.density-low {
+  padding: 26px;
+}
+
+.theme-card.density-medium {
+  padding: 20px;
+}
+
+.theme-card.density-high {
+  padding: 14px;
+}
+
+.theme-card.style-minimal {
+  border-radius: 4px;
+}
+
+.theme-card.style-tech {
+  border-radius: 14px 4px 14px 4px;
+}
+
+.theme-card.style-academic {
+  border-radius: 2px;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.theme-card.style-business {
+  border-radius: 8px;
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--preview-color) 14%, transparent);
+}
+
+.theme-card.style-magazine {
+  border-radius: 0;
+}
+
+.theme-accent {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  background: var(--preview-color);
+}
+
+.theme-tag {
+  display: inline-block;
+  margin-bottom: 18px;
+  color: var(--preview-color);
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+}
+
+.theme-card h4 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.theme-card p {
+  max-width: 44em;
+  margin: 7px 0 0;
+  color: light-dark(#52525b, #c6c6c6);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.summary-list {
+  display: grid;
+  grid-template-columns: minmax(90px, 0.45fr) 1fr;
+  gap: 0;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid light-dark(#dedede, #4c4c4c);
+  border-radius: 10px;
+}
+
+.summary-list dt,
+.summary-list dd {
+  margin: 0;
+  padding: 9px 11px;
+  border-bottom: 1px solid light-dark(#e8e8e8, #444);
+  overflow-wrap: anywhere;
+}
+
+.summary-list dt {
+  color: light-dark(#52525b, #b9b9b9);
+  background: light-dark(#f7f7f7, #303030);
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.summary-list dd {
+  font-size: 0.86rem;
+}
+
+.summary-list > :nth-last-child(-n + 2) {
+  border-bottom: 0;
+}
+
 button {
   min-height: 40px;
   padding: 8px 14px;

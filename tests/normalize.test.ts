@@ -22,4 +22,24 @@ describe("normalizeInteraction", () => {
     expect(normalized.submitLabel).toBe("确认并继续");
     expect(normalized.controls[0]?.required).toBe(false);
   });
+
+  it("preserves a validated preview config", () => {
+    const normalized = normalizeInteraction({
+      interactionId: "preview",
+      title: "Preview",
+      controls: [
+        {
+          id: "answer",
+          type: "radio",
+          label: "Answer",
+          options: [
+            { label: "A", value: "a" },
+            { label: "B", value: "b" }
+          ]
+        }
+      ],
+      preview: { type: "summary", bindings: { Answer: "answer" } }
+    });
+    expect(normalized.preview).toEqual({ type: "summary", bindings: { Answer: "answer" } });
+  });
 });

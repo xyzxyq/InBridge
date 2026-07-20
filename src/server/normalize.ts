@@ -10,6 +10,7 @@ export function normalizeInteraction(input: InteractionConfig): NormalizedIntera
     ...(parsed.description === undefined ? {} : { description: parsed.description }),
     controls: parsed.controls,
     submitLabel: parsed.submitLabel ?? "确认并继续",
-    ...(parsed.cancelLabel === undefined ? {} : { cancelLabel: parsed.cancelLabel })
+    ...(parsed.cancelLabel === undefined ? {} : { cancelLabel: parsed.cancelLabel }),
+    ...(parsed.preview === undefined ? {} : { preview: parsed.preview })
   };
 }

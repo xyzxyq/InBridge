@@ -116,6 +116,37 @@ export const controlSchema = z.discriminatedUnion("type", [
   colorControlSchema
 ]);
 
+const themeBindingsSchema = z
+  .object({
+    primaryColor: idSchema.optional(),
+    brightness: idSchema.optional(),
+    density: idSchema.optional(),
+    style: idSchema.optional()
+  })
+  .strict();
+
+const summaryBindingsSchema = z
+  .record(z.string().min(1).max(60), idSchema)
+  .refine((bindings) => Object.keys(bindings).length <= 20, "summary bindings must not exceed 20 entries");
+
+export const previewSchema = z.discriminatedUnion("type", [
+  z
+    .object({
+      type: z.literal("theme_card"),
+      title: z.string().min(1).max(120).optional(),
+      body: z.string().min(1).max(400).optional(),
+      bindings: themeBindingsSchema.optional().default({})
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("summary"),
+      title: z.string().min(1).max(120).optional(),
+      bindings: summaryBindingsSchema.optional()
+    })
+    .strict()
+]);
+
 function validateOptions(
   control: { options: Array<{ value: string }> },
   index: number,
@@ -135,7 +166,8 @@ export const interactionConfigSchema = z
     description: z.string().max(800).optional(),
     controls: z.array(controlSchema).min(1).max(20),
     submitLabel: z.string().min(1).max(60).optional(),
-    cancelLabel: z.string().min(1).max(60).optional()
+    cancelLabel: z.string().min(1).max(60).optional(),
+    preview: previewSchema.optional()
   })
   .strict()
   .superRefine((config, ctx) => {
@@ -219,6 +251,37 @@ export const interactionConfigSchema = z
         });
       }
     });
+
+    if (config.preview) {
+      const controlsById = new Map(config.controls.map((control) => [control.id, control]));
+      const bindingEntries = Object.entries(config.preview.bindings ?? {});
+      for (const [binding, controlId] of bindingEntries) {
+        const control = controlsById.get(controlId);
+        if (!control) {
+          ctx.addIssue({
+            code: "custom",
+            message: `preview binding references unknown control: ${controlId}`,
+            path: ["preview", "bindings", binding]
+          });
+          continue;
+        }
+
+        if (config.preview.type === "theme_card") {
+          const compatible =
+            (binding === "primaryColor" && control.type === "color") ||
+            (binding === "brightness" && (control.type === "range" || control.type === "number")) ||
+            ((binding === "density" || binding === "style") &&
+              (control.type === "radio" || control.type === "select"));
+          if (!compatible) {
+            ctx.addIssue({
+              code: "custom",
+              message: `${binding} is not compatible with ${control.type}`,
+              path: ["preview", "bindings", binding]
+            });
+          }
+        }
+      }
+    }
   });
 
 export const normalizedInteractionSchema = z.object({
@@ -227,7 +290,8 @@ export const normalizedInteractionSchema = z.object({
   description: z.string().optional(),
   controls: z.array(controlSchema),
   submitLabel: z.string(),
-  cancelLabel: z.string().optional()
+  cancelLabel: z.string().optional(),
+  preview: previewSchema.optional()
 });
 
 export type InteractionConfig = z.input<typeof interactionConfigSchema>;

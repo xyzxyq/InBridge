@@ -78,6 +78,26 @@ type Control =
   | SwitchControl
   | ColorControl;
 
+interface ThemeCardPreview {
+  type: "theme_card";
+  title?: string;
+  body?: string;
+  bindings: {
+    primaryColor?: string;
+    brightness?: string;
+    density?: string;
+    style?: string;
+  };
+}
+
+interface SummaryPreview {
+  type: "summary";
+  title?: string;
+  bindings?: Record<string, string>;
+}
+
+type Preview = ThemeCardPreview | SummaryPreview;
+
 interface Interaction {
   interactionId: string;
   title: string;
@@ -85,13 +105,14 @@ interface Interaction {
   controls: Control[];
   submitLabel: string;
   cancelLabel?: string;
+  preview?: Preview;
 }
 
 const rootElement = document.querySelector<HTMLElement>("#app");
 if (!rootElement) throw new Error("Missing #app root");
 const root: HTMLElement = rootElement;
 
-const bridge = new App({ name: "inbridge-widget", version: "0.2.0" });
+const bridge = new App({ name: "inbridge-widget", version: "0.3.0" });
 let interaction: Interaction | undefined;
 let submitted = false;
 
@@ -119,17 +140,25 @@ function clearInvalid(controlId: string): void {
   setStatus("");
 }
 
-function collectValues(): Record<string, unknown> | undefined {
+function handleControlChange(controlId: string): void {
+  clearInvalid(controlId);
+  refreshPreview();
+}
+
+function collectValues(validateRequired = true): Record<string, unknown> | undefined {
   if (!interaction) return undefined;
   const values: Record<string, unknown> = {};
 
   for (const control of interaction.controls) {
     const container = controlContainer(control.id);
-    if (!container) return markInvalid(control);
+    if (!container) {
+      if (validateRequired) return markInvalid(control);
+      continue;
+    }
 
     if (control.type === "radio") {
       const selected = container.querySelector<HTMLInputElement>('input[type="radio"]:checked');
-      if (control.required && !selected) return markInvalid(control);
+      if (validateRequired && control.required && !selected) return markInvalid(control);
       values[control.id] = selected?.value ?? "";
     }
 
@@ -137,43 +166,49 @@ function collectValues(): Record<string, unknown> | undefined {
       const selected = Array.from(
         container.querySelectorAll<HTMLInputElement>('input[type="checkbox"]:checked')
       ).map((input) => input.value);
-      if (control.required && selected.length === 0) return markInvalid(control);
+      if (validateRequired && control.required && selected.length === 0) return markInvalid(control);
       values[control.id] = selected;
     }
 
     if (control.type === "select") {
       const input = container.querySelector<HTMLSelectElement>("select");
-      if (!input || (control.required && input.value === "")) return markInvalid(control);
+      if (!input || (validateRequired && control.required && input.value === "")) return markInvalid(control);
       values[control.id] = input.value;
     }
 
     if (control.type === "range") {
       const input = container.querySelector<HTMLInputElement>('input[type="range"]');
-      if (!input) return markInvalid(control);
+      if (!input) {
+        if (validateRequired) return markInvalid(control);
+        continue;
+      }
       values[control.id] = Number(input.value);
     }
 
     if (control.type === "text") {
       const input = container.querySelector<HTMLInputElement>('input[type="text"]');
-      if (!input || (control.required && input.value.trim() === "")) return markInvalid(control);
+      if (!input || (validateRequired && control.required && input.value.trim() === "")) return markInvalid(control);
       values[control.id] = input.value;
     }
 
     if (control.type === "number") {
       const input = container.querySelector<HTMLInputElement>('input[type="number"]');
-      if (!input || (control.required && input.value === "")) return markInvalid(control);
+      if (!input || (validateRequired && control.required && input.value === "")) return markInvalid(control);
       values[control.id] = input.value === "" ? null : Number(input.value);
     }
 
     if (control.type === "switch") {
       const input = container.querySelector<HTMLInputElement>('input[type="checkbox"]');
-      if (!input || (control.required && !input.checked)) return markInvalid(control);
+      if (!input || (validateRequired && control.required && !input.checked)) return markInvalid(control);
       values[control.id] = input.checked;
     }
 
     if (control.type === "color") {
       const input = container.querySelector<HTMLInputElement>('input[type="color"]');
-      if (!input) return markInvalid(control);
+      if (!input) {
+        if (validateRequired) return markInvalid(control);
+        continue;
+      }
       values[control.id] = input.value.toUpperCase();
     }
   }
@@ -276,7 +311,7 @@ function createChoiceGroup(control: RadioControl | CheckboxGroupControl): HTMLEl
       control.type === "radio"
         ? option.value === control.defaultValue
         : control.defaultValue.includes(option.value);
-    input.addEventListener("change", () => clearInvalid(control.id));
+    input.addEventListener("change", () => handleControlChange(control.id));
     const text = document.createElement("span");
     text.textContent = option.label;
     label.append(input, text);
@@ -315,7 +350,7 @@ function createField(control: Exclude<Control, RadioControl | CheckboxGroupContr
       element.selected = option.value === control.defaultValue;
       select.append(element);
     }
-    select.addEventListener("change", () => clearInvalid(control.id));
+    select.addEventListener("change", () => handleControlChange(control.id));
     container.append(select);
   }
 
@@ -335,8 +370,11 @@ function createField(control: Exclude<Control, RadioControl | CheckboxGroupContr
       output.value = input.value;
       input.addEventListener("input", () => {
         output.value = input.value;
+        refreshPreview();
       });
       row.append(output);
+    } else {
+      input.addEventListener("input", refreshPreview);
     }
     container.append(row);
   }
@@ -355,7 +393,7 @@ function createField(control: Exclude<Control, RadioControl | CheckboxGroupContr
       if (control.max !== undefined) input.max = String(control.max);
       if (control.defaultValue !== undefined) input.value = String(control.defaultValue);
     }
-    input.addEventListener("input", () => clearInvalid(control.id));
+    input.addEventListener("input", () => handleControlChange(control.id));
     container.append(input);
   }
 
@@ -366,7 +404,7 @@ function createField(control: Exclude<Control, RadioControl | CheckboxGroupContr
     input.id = inputId;
     input.type = "checkbox";
     input.checked = control.defaultValue;
-    input.addEventListener("change", () => clearInvalid(control.id));
+    input.addEventListener("change", () => handleControlChange(control.id));
     const track = document.createElement("span");
     track.className = "switch-track";
     track.setAttribute("aria-hidden", "true");
@@ -388,12 +426,91 @@ function createField(control: Exclude<Control, RadioControl | CheckboxGroupContr
     output.value = input.value.toUpperCase();
     input.addEventListener("input", () => {
       output.value = input.value.toUpperCase();
+      refreshPreview();
     });
     row.append(input, output);
     container.append(row);
   }
 
   return container;
+}
+
+function formatPreviewValue(value: unknown): string {
+  if (Array.isArray(value)) return value.length > 0 ? value.join("、") : "未选择";
+  if (typeof value === "boolean") return value ? "开启" : "关闭";
+  if (value === null || value === undefined || value === "") return "未填写";
+  return String(value);
+}
+
+function renderThemeCard(container: HTMLElement, preview: ThemeCardPreview, values: Record<string, unknown>): void {
+  const card = document.createElement("article");
+  card.className = "theme-card";
+
+  const colorValue = preview.bindings.primaryColor ? values[preview.bindings.primaryColor] : undefined;
+  const color = typeof colorValue === "string" && /^#[0-9A-Fa-f]{6}$/.test(colorValue) ? colorValue : "#2563EB";
+  card.style.setProperty("--preview-color", color);
+
+  const brightnessValue = preview.bindings.brightness ? values[preview.bindings.brightness] : undefined;
+  const brightness = typeof brightnessValue === "number" && Number.isFinite(brightnessValue)
+    ? Math.min(100, Math.max(0, brightnessValue))
+    : 50;
+  card.style.filter = `brightness(${0.65 + brightness / 200})`;
+
+  const densityValue = preview.bindings.density ? values[preview.bindings.density] : undefined;
+  const density = densityValue === "low" || densityValue === "high" ? densityValue : "medium";
+  card.classList.add(`density-${density}`);
+
+  const styleValue = preview.bindings.style ? values[preview.bindings.style] : undefined;
+  const allowedStyles = new Set(["minimal", "tech", "academic", "business", "magazine"]);
+  const style = typeof styleValue === "string" && allowedStyles.has(styleValue) ? styleValue : "minimal";
+  card.classList.add(`style-${style}`);
+
+  const accent = document.createElement("div");
+  accent.className = "theme-accent";
+  const tag = document.createElement("span");
+  tag.className = "theme-tag";
+  tag.textContent = style.toUpperCase();
+  const title = document.createElement("h4");
+  title.textContent = preview.title ?? "示例标题";
+  const body = document.createElement("p");
+  body.textContent = preview.body ?? "预览会安全地响应颜色、明暗、密度和风格参数。";
+  card.append(accent, tag, title, body);
+  container.append(card);
+}
+
+function renderSummary(container: HTMLElement, preview: SummaryPreview, values: Record<string, unknown>): void {
+  if (!interaction) return;
+  const list = document.createElement("dl");
+  list.className = "summary-list";
+  const entries = preview.bindings && Object.keys(preview.bindings).length > 0
+    ? Object.entries(preview.bindings)
+    : interaction.controls.map((control) => [control.label, control.id] as const);
+
+  for (const [label, controlId] of entries) {
+    const term = document.createElement("dt");
+    term.textContent = label;
+    const detail = document.createElement("dd");
+    detail.textContent = formatPreviewValue(values[controlId]);
+    list.append(term, detail);
+  }
+  container.append(list);
+}
+
+function refreshPreview(): void {
+  if (!interaction?.preview) return;
+  const container = root.querySelector<HTMLElement>("[data-preview]");
+  if (!container) return;
+  const values = collectValues(false) ?? {};
+  container.replaceChildren();
+
+  const title = document.createElement("h3");
+  title.textContent = interaction.preview.title ?? (interaction.preview.type === "summary" ? "当前配置" : "实时预览");
+  container.append(title);
+  if (interaction.preview.type === "theme_card") {
+    renderThemeCard(container, interaction.preview, values);
+  } else {
+    renderSummary(container, interaction.preview, values);
+  }
 }
 
 function render(config: Interaction): void {
@@ -426,6 +543,13 @@ function render(config: Interaction): void {
         ? createChoiceGroup(control)
         : createField(control)
     );
+  }
+
+  if (config.preview) {
+    const preview = document.createElement("section");
+    preview.className = "preview";
+    preview.dataset.preview = "";
+    form.append(preview);
   }
 
   const actions = document.createElement("div");
@@ -467,6 +591,7 @@ function render(config: Interaction): void {
   panel.append(fallback);
 
   root.append(panel);
+  refreshPreview();
 }
 
 bridge.ontoolresult = (result) => {
