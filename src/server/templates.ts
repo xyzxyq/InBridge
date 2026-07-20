@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { normalizeInteraction } from "./normalize.js";
 import {
+  comparisonCardOptionSchema,
   idSchema,
   normalizedInteractionSchema,
   optionSchema,
@@ -8,7 +9,7 @@ import {
   type NormalizedInteraction
 } from "./schemas.js";
 
-export const templateIdSchema = z.enum(["decision", "confirmation", "experiment_config", "theme_config"]);
+export const templateIdSchema = z.enum(["decision", "confirmation", "experiment_config", "theme_config", "comparison"]);
 
 export const templateCatalogEntrySchema = z
   .object({
@@ -54,6 +55,13 @@ export const TEMPLATE_CATALOG: z.output<typeof templateCatalogEntrySchema>[] = [
     description: "生成颜色、亮度、密度和视觉风格参数，并提供安全实时预览。",
     bestFor: ["图表主题", "界面主题", "视觉风格确认"],
     requiredParameters: ["interactionId"]
+  },
+  {
+    id: "comparison",
+    title: "方案比较",
+    description: "用信息丰富的单选卡片并列展示方案说明、优势和限制。",
+    bestFor: ["实施方案比较", "技术选型", "策略选择"],
+    requiredParameters: ["interactionId", "options"]
   }
 ];
 
@@ -150,12 +158,25 @@ const themeTemplateSchema = z
   })
   .strict();
 
+const comparisonTemplateSchema = z
+  .object({
+    templateId: z.literal("comparison"),
+    ...sharedFields,
+    fieldLabel: z.string().min(1).max(120).optional().default("方案比较"),
+    options: z.array(comparisonCardOptionSchema).min(2).max(6),
+    defaultValue: z.string().min(1).max(120).optional(),
+    required: z.boolean().optional().default(true),
+    summaryTitle: z.string().min(1).max(120).optional().default("当前选择")
+  })
+  .strict();
+
 export const interactionTemplateRequestSchema = z
   .discriminatedUnion("templateId", [
     decisionTemplateSchema,
     confirmationTemplateSchema,
     experimentTemplateSchema,
-    themeTemplateSchema
+    themeTemplateSchema,
+    comparisonTemplateSchema
   ])
   .superRefine((request, context) => {
     if (request.templateId === "decision") {
@@ -213,6 +234,20 @@ export const interactionTemplateRequestSchema = z
         });
       }
     }
+
+    if (request.templateId === "comparison") {
+      const values = request.options.map((option) => option.value);
+      if (new Set(values).size !== values.length) {
+        context.addIssue({ code: "custom", message: "comparison option values must be unique", path: ["options"] });
+      }
+      if (request.defaultValue !== undefined && !values.includes(request.defaultValue)) {
+        context.addIssue({
+          code: "custom",
+          message: "defaultValue must match a comparison option",
+          path: ["defaultValue"]
+        });
+      }
+    }
   });
 
 // MCP's tools/list exporter requires a plain object shape. Keep this schema
@@ -228,8 +263,14 @@ export const interactionTemplateToolInputSchema = z
     cancelLabel: z.string().min(1).max(60).optional(),
     mode: z.enum(["single", "multiple"]).optional(),
     fieldLabel: z.string().min(1).max(120).optional(),
-    options: z.array(optionSchema).min(2).max(50).optional(),
+    options: z
+      .union([
+        z.array(optionSchema).min(2).max(50),
+        z.array(comparisonCardOptionSchema).min(2).max(6)
+      ])
+      .optional(),
     defaultValues: z.array(z.string().min(1).max(120)).max(50).optional(),
+    defaultValue: z.string().min(1).max(120).optional(),
     required: z.boolean().optional(),
     summaryTitle: z.string().min(1).max(120).optional(),
     confirmLabel: z.string().min(1).max(120).optional(),
@@ -497,6 +538,28 @@ export function buildInteractionTemplate(input: InteractionTemplateRequest): Nor
             density: "density",
             style: "style"
           }
+        }
+      };
+      break;
+    case "comparison":
+      config = {
+        ...sharedInteraction(request),
+        title: request.title ?? "比较并选择一个方案",
+        controls: [
+          {
+            id: "choice",
+            type: "comparison_cards",
+            label: request.fieldLabel,
+            required: request.required,
+            options: request.options,
+            ...(request.defaultValue === undefined ? {} : { defaultValue: request.defaultValue })
+          }
+        ],
+        submitLabel: request.submitLabel ?? "确认方案",
+        preview: {
+          type: "summary",
+          title: request.summaryTitle,
+          bindings: { [request.fieldLabel]: "choice" }
         }
       };
       break;

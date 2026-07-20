@@ -7,12 +7,13 @@ import {
 } from "../src/server/templates.js";
 
 describe("interaction templates", () => {
-  it("publishes four valid discoverable templates", () => {
+  it("publishes five valid discoverable templates", () => {
     expect(templateCatalogOutputSchema.parse({ templates: TEMPLATE_CATALOG }).templates.map((entry) => entry.id)).toEqual([
       "decision",
       "confirmation",
       "experiment_config",
-      "theme_config"
+      "theme_config",
+      "comparison"
     ]);
   });
 
@@ -153,5 +154,46 @@ describe("interaction templates", () => {
         style: "style"
       }
     });
+  });
+
+  it("builds a comparison interaction with a safe summary", () => {
+    const interaction = buildInteractionTemplate({
+      templateId: "comparison",
+      interactionId: "choose_plan",
+      options: [
+        { value: "fast", title: "快速方案", badge: "推荐", pros: ["交付快"] },
+        { value: "safe", title: "稳健方案", cons: ["周期更长"] }
+      ],
+      defaultValue: "safe"
+    });
+
+    expect(interaction).toMatchObject({
+      title: "比较并选择一个方案",
+      submitLabel: "确认方案",
+      controls: [
+        {
+          id: "choice",
+          type: "comparison_cards",
+          label: "方案比较",
+          required: true,
+          defaultValue: "safe"
+        }
+      ],
+      preview: { type: "summary", title: "当前选择", bindings: { 方案比较: "choice" } }
+    });
+  });
+
+  it("rejects a comparison default outside its options", () => {
+    expect(() =>
+      interactionTemplateRequestSchema.parse({
+        templateId: "comparison",
+        interactionId: "bad_comparison",
+        options: [
+          { value: "fast", title: "Fast" },
+          { value: "safe", title: "Safe" }
+        ],
+        defaultValue: "missing"
+      })
+    ).toThrow(/defaultValue must match a comparison option/);
   });
 });

@@ -94,4 +94,35 @@
 }
 ```
 
+## comparison
+
+适合比较信息较丰富的实施方案、技术选型或策略。每张卡可以展示说明、标签、优势和限制，最终只提交一个稳定的 `value`。
+
+```json
+{
+  "templateId": "comparison",
+  "interactionId": "choose_implementation",
+  "title": "选择实施方案",
+  "options": [
+    {
+      "value": "fast",
+      "title": "快速方案",
+      "description": "优先跑通最小闭环",
+      "badge": "推荐",
+      "pros": ["交付快", "风险低"],
+      "cons": ["扩展能力有限"]
+    },
+    {
+      "value": "safe",
+      "title": "稳健方案",
+      "description": "优先保证长期维护性",
+      "pros": ["边界清晰", "易扩展"],
+      "cons": ["首轮周期更长"]
+    }
+  ]
+}
+```
+
+每组允许 2–6 张卡片。`badge` 只作说明，不会自动替用户选择；如提供 `defaultValue`，它必须匹配某张卡片的 `value`。
+
 所有模板最终都会转换为与 `render_interaction` 相同的严格白名单结构，并复用同一套确认、取消、重试和结果回传协议。
