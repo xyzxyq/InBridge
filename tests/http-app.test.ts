@@ -58,6 +58,16 @@ describe("HTTP production boundary", () => {
     expect(id).not.toBe("unsafe request id");
   });
 
+  test("serves the project icon from the production origin", async () => {
+    const response = await fetch(`${baseUrl}/icon.png`);
+    const body = new Uint8Array(await response.arrayBuffer());
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("image/png");
+    expect(response.headers.get("cache-control")).toBe("public, max-age=86400, immutable");
+    expect(Array.from(body.slice(0, 8))).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
+  });
+
   test("returns a safe JSON response for malformed JSON", async () => {
     const response = await fetch(`${baseUrl}/mcp`, {
       method: "POST",

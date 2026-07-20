@@ -1,135 +1,288 @@
-# InBridge
+<div align="center">
+  <img src="icon/icon.png" alt="InBridge 图标" width="168" />
+  <h1>InBridge</h1>
+  <p><strong>在 ChatGPT 对话中完成清晰、安全、可继续执行的结构化选择。</strong></p>
+  <p>个人优先、声明式、无状态的 MCP App。</p>
 
-InBridge 是一个个人优先的 MCP App：当模型需要用户选择时，它在 ChatGPT 对话中显示内联交互控件，并把用户确认的结构化结果送回模型。
+  <p>
+    <a href="README.en.md">English</a>
+    ·
+    <a href="https://mcp.example.com/health">生产状态</a>
+    ·
+    <a href="docs/TEMPLATES.md">模板文档</a>
+    ·
+    <a href="docs/OPERATIONS.md">运维手册</a>
+  </p>
 
-Phase 1 的最小真实闭环已经通过 ChatGPT Developer Mode 人工验收：
+  <p>
+    <a href="https://github.com/xyzxyq/InBridge/actions/workflows/ci.yml"><img src="https://github.com/xyzxyq/InBridge/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+    <img src="https://img.shields.io/badge/version-0.10.0-8b5cf6" alt="版本 0.10.0" />
+    <img src="https://img.shields.io/badge/Node.js-22.x-339933?logo=nodedotjs&logoColor=white" alt="Node.js 22.x" />
+    <img src="https://img.shields.io/badge/MCP%20Apps-1.7.4-2563eb" alt="MCP Apps 1.7.4" />
+    <img src="https://img.shields.io/badge/TypeScript-5.9-3178c6?logo=typescript&logoColor=white" alt="TypeScript 5.9" />
+  </p>
+</div>
 
-1. 模型调用 `render_interaction`；
-2. ChatGPT 显示单选面板；
-3. 用户选择并点击“确认并继续”；
-4. Widget 调用 `updateModelContext` 写入完整结果；
-5. Widget 调用 `sendMessage` 自动触发下一轮；
-6. 模型读取选择并继续任务。
+---
+
+## 项目简介
+
+InBridge 是一个面向 ChatGPT 的 MCP App。当模型需要用户选择方案、确认操作或配置参数时，InBridge 会在对话中显示内联交互面板，而不是要求用户用自然语言反复描述选择。
+
+用户确认后，Widget 会把带版本号的结构化结果写回模型上下文，并自动触发下一轮对话。模型因此可以准确读取用户的选择，并继续原任务。
+
+典型闭环如下：
+
+1. 模型调用 InBridge 工具；
+2. ChatGPT 加载内联 Widget；
+3. 用户选择、填写或取消；
+4. Widget 冻结本次结果，防止重复提交和提交中篡改；
+5. 结果通过 `updateModelContext` 写入模型上下文；
+6. Widget 通过 `sendMessage` 触发下一轮；
+7. 模型读取结构化结果并继续任务。
+
+InBridge 已通过 ChatGPT Developer Mode 的真实闭环验证，并部署在 Vercel。
+
+## 为什么需要 InBridge
+
+对话中的纯文本选择在简单场景下足够，但当选项、约束或参数变多时，容易出现以下问题：
+
+- 用户需要手动复制选项名称或参数；
+- 模型可能误读模糊表达；
+- 多字段配置缺少必填校验和实时摘要；
+- 方案对比难以保持信息结构一致；
+- 用户确认后仍需再发送一句话，模型才会继续；
+- Host 能力或网络异常时，选择结果可能无法可靠传递。
+
+InBridge 将这些问题收敛为一个受控的声明式交互协议：模型只描述允许的控件和数据，Widget 负责呈现、校验、确认、回传和降级恢复。
 
 ## 当前能力
 
-- 无状态 streaming HTTP MCP endpoint：`POST /mcp`
-- 健康检查：`GET /health`
-- 标准 MCP Apps UI resource：`text/html;profile=mcp-app`
-- 严格白名单 schema，支持 radio、checkbox_group、select、range、text、number、switch、color、comparison_cards
-- 安全声明式实时预览：theme_card、summary
-- 必填校验与重复提交保护
-- 确认与取消结果
-- `updateModelContext` + `sendMessage` 双通道提交
-- 上下文更新失败时，将压缩 JSON 放入 follow-up message
-- 两条通道都失败时，显示可复制 JSON
-- 根据 Host capabilities 检测上下文更新与消息能力
-- 自动提交失败后可重试同一份冻结结果，不会重复读取或篡改表单值
-- 取消结果使用独立消息，并始终清空未确认值
-- 请求级 `X-Request-Id`、结构化生产日志和安全错误响应
-- 64kb 请求上限、安全响应头与 Vercel `/mcp` IP 限流
-- GitHub CI 发布门禁和每 6 小时生产全链路监控
-- 模板发现工具：`list_interaction_templates`
-- 模板渲染工具：`render_interaction_template`
-- 内置 `decision`、`confirmation`、`experiment_config`、`theme_config`、`comparison` 五个严格模板
-- 声明式条件控件：`equals`、`not_equals`、`includes`、`not_includes`
-- 隐藏字段自动退出必填校验、提交结果和摘要
-- 可选的 2–8 步向导、步骤进度、当前步骤校验和返回保值
-- `experiment_config` 三步配置，只有最终确认才触发 ChatGPT 继续
-- 单选比较卡片：安全展示方案说明、优势、限制和中性标签
+### 交互控件
 
-## 环境要求
+| 控件 | 类型 | 适用场景 |
+| --- | --- | --- |
+| 单选 | `radio` | 方案选择、互斥偏好 |
+| 多选 | `checkbox_group` | 标签、环境、能力组合 |
+| 下拉选择 | `select` | 候选项较多的单值字段 |
+| 滑块 | `range` | 预算、强度、亮度等连续参数 |
+| 文本 | `text` | 备注、补充要求 |
+| 数字 | `number` | 数量、种子数、阈值 |
+| 开关 | `switch` | 启用或禁用某项能力 |
+| 颜色 | `color` | 主题色、图表色 |
+| 比较卡片 | `comparison_cards` | 并列展示方案说明、优势和限制 |
 
-- Node.js 22 或更高版本
-- npm 11 或兼容版本
-- 如需连接 ChatGPT：可访问 Developer Mode
+### 组合能力
 
-## 生产服务
+- 严格必填校验和聚焦提示；
+- 声明式条件显示：`equals`、`not_equals`、`includes`、`not_includes`；
+- 隐藏字段自动退出校验、摘要和最终提交；
+- 2–8 步向导、当前步骤校验、返回保值和最终确认；
+- `summary` 与 `theme_card` 两种安全实时预览；
+- 确认与取消使用不同结果语义；
+- 提交值冻结、并发提交保护和完成态防重复提交；
+- Host 能力检测、自动重试和可复制 JSON 回退；
+- MCP 服务身份和生产端点使用项目图标。
 
-当前稳定部署地址：
+## 技术架构
 
-- 健康检查：`https://mcp.example.com/health`
-- MCP endpoint：`https://mcp.example.com/mcp`
+![InBridge 技术架构](docs/assets/architecture.png)
 
-服务部署在 Vercel Express Functions，代码仓库已与 Vercel 项目连接。发布生产版本：
+该图由 [LaTeX TikZ 源文件](docs/architecture.tex) 绘制，仓库同时保存了可直接查看的 [PDF 版本](docs/assets/architecture.pdf)。README 使用 PNG 版本，以确保 GitHub、移动端和多数 Markdown 阅读器都能稳定显示。
 
-```bash
-vercel --prod
+### 架构分层
+
+| 层 | 职责 | 主要实现 |
+| --- | --- | --- |
+| HTTP 边界 | 无状态 MCP 请求、健康检查、图标、安全响应和错误隔离 | Express 5、Streamable HTTP |
+| 配置核心 | Schema 白名单、默认值、交叉字段校验、模板构造和标准化 | Zod 4、TypeScript |
+| MCP 层 | 工具发现、工具调用、UI resource 和 Server identity | MCP SDK、MCP Apps SDK |
+| Widget 层 | 控件渲染、条件显示、向导、预览、可访问性和表单状态 | 原生 DOM、CSS、MCP Apps bridge |
+| 结果交付 | 上下文更新、下一轮触发、重试和人工复制回退 | `updateModelContext`、`sendMessage` |
+| 生产运维 | 构建门禁、部署、日志、限流和远程烟雾测试 | Vercel、GitHub Actions |
+
+### 无状态服务模型
+
+`POST /mcp` 的每个请求都会创建独立的 `McpServer` 和 `StreamableHTTPServerTransport`，不依赖进程内会话状态。交互状态只存在于当前 Widget 中，确认结果通过标准 Host 能力回到对话。
+
+这种设计适合 Serverless 部署，并减少跨用户状态污染和服务端清理成本。
+
+### Widget 交付方式
+
+Vite 将 Widget 编译为单个 IIFE JavaScript 文件和一个 CSS 文件。MCP resource 在读取时将两者内联到 HTML 中，并以 `text/html;profile=mcp-app` 返回。当前 Widget 不依赖外部脚本、样式、图片或网络请求。
+
+## MCP 接口
+
+### 服务端点
+
+| 端点 | 方法 | 说明 |
+| --- | --- | --- |
+| `https://mcp.example.com/mcp` | `POST` | 无状态 Streaming HTTP MCP endpoint |
+| `https://mcp.example.com/health` | `GET` | 服务健康状态与版本 |
+| `https://mcp.example.com/icon.png` | `GET` | 项目和 MCP 服务图标 |
+
+### MCP Tools
+
+| Tool | 说明 |
+| --- | --- |
+| `list_interaction_templates` | 返回稳定模板目录和适用场景 |
+| `render_interaction_template` | 通过模板生成一致、严格校验的交互 |
+| `render_interaction` | 为模板未覆盖的场景生成自定义声明式交互 |
+
+对于常见决策、确认和配置场景，优先使用模板工具。只有确实需要自定义字段组合时，才使用底层 `render_interaction`。
+
+### 内置模板
+
+| 模板 | 用途 | 关键能力 |
+| --- | --- | --- |
+| `decision` | 单选或多选决策 | 摘要、默认值、必填控制 |
+| `confirmation` | 执行前确认或拒绝 | 确认、拒绝、取消三种独立语义 |
+| `experiment_config` | 机器学习实验设计 | 9 个字段、三步向导、条件消融配置 |
+| `theme_config` | 主题与视觉参数 | 颜色、亮度、密度、风格实时预览 |
+| `comparison` | 技术选型与方案比较 | 2–6 张单选卡片、优势与限制 |
+
+完整参数见 [模板文档](docs/TEMPLATES.md)。
+
+## 结果协议与失败恢复
+
+确认结果始终使用稳定、可版本化的结构：
+
+```json
+{
+  "version": "1",
+  "interactionId": "choose_plan_001",
+  "status": "confirmed",
+  "values": {
+    "choice": "safe"
+  },
+  "submittedAt": "2026-07-20T12:00:00.000Z"
+}
 ```
 
-生产监控、日志排查与回滚方法见 [`docs/OPERATIONS.md`](docs/OPERATIONS.md)。
+取消时 `status` 为 `cancelled`，且 `values` 始终是空对象，防止未确认输入意外影响模型。
 
-模板参数和调用示例见 [`docs/TEMPLATES.md`](docs/TEMPLATES.md)。
+Widget 根据 Host 能力和调用结果区分四种交付状态：
 
-## 本地运行
+| 状态 | 含义 |
+| --- | --- |
+| `sent_with_context` | 结构化上下文和下一轮触发消息都成功 |
+| `sent_with_inline_result` | 上下文更新不可用，完整 JSON 随消息发送 |
+| `context_only` | 结果已写入上下文，但触发消息失败，可重试 |
+| `manual_copy` | 两种 Host 能力都不可用，可重试或复制 JSON |
+
+提交开始后，表单值会被冻结。同一份冻结结果可以安全重试，不会再次读取或修改表单内容。
+
+## 安全边界
+
+InBridge 的最高原则是：模型提供数据和声明，不提供可执行 UI。
+
+- 所有输入对象使用严格 schema，未知字段会被拒绝；
+- 控件数量、字符串长度、选项数量和数组长度都有上限；
+- 不接受模型提供的 HTML、JavaScript、CSS、表达式或事件处理器；
+- 不接受图片 URL、外部资源 URL 或任意网络请求；
+- 条件控件只能引用之前出现的控件，禁止自引用、后向引用和循环；
+- preview 只能绑定到类型兼容的现有控件；
+- 请求体上限为 64 KB；
+- 错误响应不会回显请求正文或用户选择；
+- 日志只记录请求 ID、路径、状态和耗时；
+- 响应包含 `nosniff`、无 referrer、受限 Permissions Policy 等安全头；
+- Vercel Firewall 对 `/mcp` 执行 IP 限流。
+
+## 快速开始
+
+### 环境要求
+
+- Node.js 22.x；
+- npm 11 或兼容版本；
+- 如需连接 ChatGPT，需要可使用 Developer Mode 和自定义 MCP App/Connector。
+
+### 安装与构建
 
 ```bash
+git clone git@github.com:xyzxyq/InBridge.git
+cd InBridge
 npm install
 npm run build
 npm start
 ```
 
-默认监听 `http://localhost:3000`。可通过环境变量覆盖端口：
+服务默认监听 `http://localhost:3000`：
+
+```text
+GET  http://localhost:3000/health
+GET  http://localhost:3000/icon.png
+POST http://localhost:3000/mcp
+```
+
+使用其他端口：
 
 ```bash
 PORT=4100 npm start
 ```
 
-Windows PowerShell：
+PowerShell：
 
 ```powershell
 $env:PORT = "4100"
 npm start
 ```
 
-开发模式：
+### 开发模式
 
 ```bash
 npm run build:ui
 npm run dev
 ```
 
-修改 UI 后需要重新运行 `npm run build:ui`，服务器会从 `dist/ui` 读取并内联 widget bundle。
+服务端由 `tsx watch` 自动重启。修改 UI 后需要重新执行 `npm run build:ui`，因为服务端从 `dist/ui` 读取并内联 Widget bundle。
 
-## 验证
+## 接入 ChatGPT
 
-```bash
-npm run typecheck
-npm test
-npm run build
-npm run smoke
-```
-
-也可以让同一套烟雾测试直接核验生产服务：
-
-```powershell
-$env:INBRIDGE_BASE_URL = "https://mcp.example.com"
-npm run smoke
-```
-
-烟雾测试会临时启动编译后的服务器，并真实执行：
-
-- `GET /health`
-- MCP initialize
-- `tools/list`
-- `tools/call`：调用 `render_interaction`
-- `resources/read`：读取内联 widget
-
-## 接入 ChatGPT Developer Mode
-
-1. 在 ChatGPT 中打开 **Settings → Security and login → Developer mode**。
-2. 前往 **Settings → Plugins**，创建或编辑 InBridge developer-mode app。
-3. MCP server URL 填写 `https://mcp.example.com/mcp`。
-4. 保存并刷新应用配置。
-5. 新建对话并启用 InBridge，然后明确要求：
+1. 在 ChatGPT 设置中启用 Developer Mode；
+2. 在 Apps/Connectors 管理页面创建或编辑自定义 MCP App；
+3. MCP server URL 填写 `https://mcp.example.com/mcp`；
+4. 保存后刷新或重新连接应用；
+5. 在新对话中启用 InBridge；
+6. 明确要求模型使用 InBridge，例如：
 
 ```text
-请使用 InBridge 的 render_interaction，让我从方案 A、B、C 中选择一个。
+请调用 InBridge 的 comparison 模板，用三张比较卡片让我选择实施方案。
+每张卡片说明优势和限制，调用后等待我确认。
 ```
 
-预期结果：选择并确认后，无需手动再发消息，模型能说明用户选择并继续。
+ChatGPT 的设置名称可能随产品版本变化；关键是启用 Developer Mode，并将上述 `/mcp` HTTPS 地址添加为自定义连接器。
 
-## Tool 输入示例
+## 调用示例
+
+### 使用 comparison 模板
+
+```json
+{
+  "templateId": "comparison",
+  "interactionId": "choose_implementation",
+  "title": "选择实施方案",
+  "options": [
+    {
+      "value": "fast",
+      "title": "快速方案",
+      "description": "优先跑通最小闭环",
+      "badge": "交付优先",
+      "pros": ["上线快", "改动范围小"],
+      "cons": ["长期扩展能力有限"]
+    },
+    {
+      "value": "safe",
+      "title": "稳健方案",
+      "description": "优先保证长期维护性",
+      "badge": "推荐",
+      "pros": ["边界清晰", "易扩展"],
+      "cons": ["首轮周期更长"]
+    }
+  ]
+}
+```
+
+### 使用自定义交互
 
 ```json
 {
@@ -154,60 +307,150 @@ npm run smoke
 }
 ```
 
+## 验证与测试
+
+```bash
+npm run typecheck
+npm test
+npm run build
+npm run smoke
+```
+
+或执行完整发布前校验：
+
+```bash
+npm run verify
+npm run build
+npm run smoke
+```
+
+本地 smoke test 会临时启动编译后的服务，并真实执行：
+
+- `GET /health`；
+- `GET /icon.png` 和 MCP server identity 图标元数据；
+- MCP initialize；
+- `tools/list`；
+- 模板目录和模板渲染；
+- 自定义 `render_interaction`；
+- `resources/read` 和内联 Widget 内容检查。
+
+检查生产环境：
+
+```bash
+INBRIDGE_BASE_URL=https://mcp.example.com npm run smoke
+```
+
+测试覆盖 schema、模板、条件显示、向导、结果协议、Host 降级、HTTP 安全边界和 MCP wire shape。
+
 ## 项目结构
 
 ```text
-src/server/   MCP server、schema、标准化逻辑
-src/ui/       MCP Apps widget 与提交 bridge
-scripts/      端到端烟雾测试
-tests/        schema、标准化和结果协议测试
-plan/         初始开发规格
+InBridge/
+├── icon/
+│   └── icon.png                 # 项目与 MCP 服务图标
+├── src/
+│   ├── server/
+│   │   ├── app.ts               # Express 应用和 HTTP 路由
+│   │   ├── http.ts              # 日志、安全头和错误边界
+│   │   ├── mcp.ts               # MCP tools、resource 和服务身份
+│   │   ├── normalize.ts         # 配置标准化
+│   │   ├── schemas.ts           # 声明式交互白名单 schema
+│   │   └── templates.ts         # 内置模板目录和构造逻辑
+│   └── ui/
+│       ├── main.ts              # Widget 渲染和交互状态机
+│       ├── bridge.ts            # Host 能力检测与结果交付
+│       ├── result.ts            # 版本化结果协议
+│       ├── visibility.ts        # 条件控件解析
+│       ├── wizard.ts            # 向导导航模型
+│       └── styles.css           # 响应式 Widget 样式
+├── tests/                       # 单元、协议和 HTTP 边界测试
+├── scripts/smoke-test.ts        # 本地/远程 MCP 全链路烟雾测试
+├── docs/
+│   ├── architecture.tex         # TikZ 技术架构图源文件
+│   ├── assets/architecture.*    # README 可视化资产
+│   ├── TEMPLATES.md             # 模板参数和示例
+│   └── OPERATIONS.md            # 发布、监控、日志和回滚
+├── server.ts                    # Vercel Express Function 入口
+├── vite.config.ts               # Widget IIFE 构建
+└── vercel.json                  # 生产构建与 Function 配置
 ```
 
-完整设计见 [`plan/interactive-chat-ui-bridge-development-spec.md`](plan/interactive-chat-ui-bridge-development-spec.md)。
+## npm 命令
 
-## 预览配置
+| 命令 | 作用 |
+| --- | --- |
+| `npm run dev` | 监听服务端 TypeScript 变更 |
+| `npm run build:ui` | 构建 Widget JS/CSS |
+| `npm run build:server` | 编译服务端 TypeScript |
+| `npm run build` | 清理并完整构建 UI 与服务端 |
+| `npm run typecheck` | 检查服务端和 UI 类型 |
+| `npm test` | 运行 Vitest 测试 |
+| `npm run verify` | 类型检查后运行测试 |
+| `npm run smoke` | 执行本地或远程 MCP 烟雾测试 |
 
-`summary` 可实时显示全部控件，或通过“显示标签 → control id”绑定选择字段：
+## 部署与运维
 
-```json
-{
-  "type": "summary",
-  "title": "当前配置",
-  "bindings": {
-    "研究方向": "direction",
-    "训练预算": "budget"
-  }
-}
+仓库已连接 Vercel 项目。`main` 分支推送会触发生产构建，Vercel 在替换生产部署前执行：
+
+```text
+npm run verify
+    ↓
+npm run build
+    ↓
+Vercel Express Function
 ```
 
-`theme_card` 只接受四种受控绑定：`primaryColor`、`brightness`、`density`、`style`。绑定必须引用类型兼容的现有控件。
+GitHub Actions 对 push 和 pull request 执行相同发布门禁。另有 Production monitor 每 6 小时对生产服务运行完整远程 smoke test。
 
-```json
-{
-  "type": "theme_card",
-  "title": "示例标题",
-  "body": "根据参数实时更新的安全示例卡片。",
-  "bindings": {
-    "primaryColor": "primary_color",
-    "brightness": "brightness",
-    "density": "density",
-    "style": "style"
-  }
-}
+手动发布：
+
+```bash
+vercel --prod
 ```
 
-## 当前阶段边界
+日志关联、Firewall 和回滚步骤见 [生产运维手册](docs/OPERATIONS.md)。
 
-Phase 10 已完成单选 Comparison Cards 和 `comparison` 模板，用于并列展示方案说明、优势与限制。当前版本仍不接受模型提供的图片 URL、HTML、JavaScript、CSS、表达式或外部 URL。
+## 当前边界与路线图
 
-## 提交结果状态
+当前版本专注于一次性、结构化、显式确认的交互，不包含：
 
-Widget 内部区分四种可测试结果：
+- 服务端用户会话或表单持久化；
+- 任意富文本、HTML、CSS 或脚本渲染；
+- 模型提供的图片和外部 URL；
+- 未经确认的自动操作；
+- 长期用户偏好存储；
+- OAuth 或多租户身份隔离。
 
-- `sent_with_context`：结构化上下文与触发消息都成功；
-- `sent_with_inline_result`：上下文不可用，完整 JSON 随触发消息发送；
-- `context_only`：结果已写入上下文，但消息触发失败，UI 提供重试；
-- `manual_copy`：Host 两项能力都不可用，UI 提供重试和复制 JSON。
+已经完成的扩展阶段包括条件控件、多步骤向导和比较卡片。后续候选方向：
 
-提交开始后表单值会被冻结。同一时刻只允许一个提交请求；只有 Host 确认消息成功后，组件才进入不可重复提交的完成态。
+- 受控 Rich Preview，例如 slide、chart、document preview；
+- 经用户明确授权的 Presets；
+- 更完整的浏览器级 Widget E2E；
+- 进一步拆分 UI 渲染与提交状态机。
+
+## 设计与参考文档
+
+- [初始开发设计](plan/interactive-chat-ui-bridge-development-spec.md)
+- [模板使用说明](docs/TEMPLATES.md)
+- [条件控件设计契约](docs/PHASE-8-CONDITIONAL-CONTROLS.md)
+- [多步骤向导](docs/PHASE-9-MULTI-STEP-WIZARD.md)
+- [Comparison Cards](docs/PHASE-10-COMPARISON-CARDS.md)
+- [生产运维手册](docs/OPERATIONS.md)
+- [OpenAI Apps SDK 文档](https://developers.openai.com/apps-sdk/)
+- [Model Context Protocol](https://modelcontextprotocol.io/)
+
+## 贡献
+
+欢迎通过 Issue 或 Pull Request 提交缺陷、设计建议和兼容性反馈。修改交互协议时，请同时更新 schema、wire-level 测试、模板文档和 smoke test。
+
+提交前请运行：
+
+```bash
+npm run verify
+npm run build
+npm run smoke
+```
+
+## 许可证
+
+仓库当前尚未附带开源许可证。在许可证文件明确加入之前，默认保留全部权利；请勿假定代码可按 MIT、Apache-2.0 或其他开源许可证再分发。

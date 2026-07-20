@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import { WIDGET_URI } from "../src/server/mcp.js";
+import { APP_ICON_URL, WIDGET_URI } from "../src/server/mcp.js";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const port = 3100 + Math.floor(Math.random() * 500);
@@ -40,8 +40,16 @@ const client = new Client({ name: "inbridge-smoke-test", version: "0.10.0" });
 
 try {
   await waitForHealth();
+  const iconResponse = await fetch(`${baseUrl}/icon.png`);
+  assert.equal(iconResponse.status, 200);
+  assert.match(iconResponse.headers.get("content-type") ?? "", /^image\/png/);
+
   const transport = new StreamableHTTPClientTransport(new URL(`${baseUrl}/mcp`));
   await client.connect(transport);
+
+  assert.deepEqual(client.getServerVersion()?.icons, [
+    { src: APP_ICON_URL, mimeType: "image/png", sizes: ["1254x1254"] }
+  ]);
 
   const tools = await client.listTools();
   assert(tools.tools.some((tool) => tool.name === "render_interaction"));
@@ -173,7 +181,7 @@ try {
   );
 
   console.log(
-    "Smoke test passed: health, template discovery, template rendering, custom rendering, and resources/read are operational."
+    "Smoke test passed: health, icon metadata, template discovery, template rendering, custom rendering, and resources/read are operational."
   );
 } finally {
   await client.close().catch(() => undefined);

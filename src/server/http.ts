@@ -22,7 +22,10 @@ export function requestId(responseLocals: Record<string, unknown>): string {
 export const observeAndSecureRequests: RequestHandler = (request, response, next) => {
   const startedAt = performance.now();
   const id = headerValue(request, "x-request-id") ?? headerValue(request, "x-vercel-id") ?? randomUUID();
-  const path = request.path === "/mcp" || request.path === "/health" ? request.path : "/other";
+  const path =
+    request.path === "/mcp" || request.path === "/health" || request.path === "/icon.png"
+      ? request.path
+      : "/other";
 
   response.locals.requestId = id;
   response.set({

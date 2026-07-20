@@ -1,3 +1,4 @@
+import path from "node:path";
 import express, { type Express } from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { observeAndSecureRequests, requestId, safeHttpErrorHandler } from "./http.js";
@@ -10,6 +11,15 @@ export function configureHttpApp(app: Express) {
 
   app.get("/health", (_request, response) => {
     response.json({ status: "ok", service: "inbridge", version: "0.10.0" });
+  });
+
+  app.get("/icon.png", (_request, response, next) => {
+    response
+      .type("png")
+      .set("Cache-Control", "public, max-age=86400, immutable")
+      .sendFile(path.join(process.cwd(), "icon/icon.png"), (error) => {
+        if (error) next(error);
+      });
   });
 
   app.post("/mcp", async (request, response) => {

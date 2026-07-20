@@ -1,7 +1,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { afterEach, describe, expect, it } from "vitest";
-import { createMcpServer } from "../src/server/mcp.js";
+import { APP_ICON_URL, createMcpServer } from "../src/server/mcp.js";
 
 const closeCallbacks: Array<() => Promise<void>> = [];
 
@@ -24,6 +24,16 @@ async function connectedClient(): Promise<Client> {
 }
 
 describe("MCP tool descriptors", () => {
+  it("publishes the project icon in the MCP server identity", async () => {
+    const client = await connectedClient();
+
+    expect(client.getServerVersion()).toMatchObject({
+      name: "inbridge",
+      version: "0.10.0",
+      icons: [{ src: APP_ICON_URL, mimeType: "image/png", sizes: ["1254x1254"] }]
+    });
+  });
+
   it("publishes the required template selector fields through tools/list", async () => {
     const client = await connectedClient();
     const result = await client.listTools();

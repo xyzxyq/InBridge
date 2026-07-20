@@ -1,0 +1,75 @@
+\documentclass[tikz,border=18pt]{standalone}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usetikzlibrary{arrows.meta,backgrounds,fit,positioning}
+\hyphenpenalty=10000
+
+\definecolor{ink}{HTML}{24314A}
+\definecolor{muted}{HTML}{667085}
+\definecolor{blue}{HTML}{6D8DFF}
+\definecolor{bluefill}{HTML}{EEF3FF}
+\definecolor{pink}{HTML}{E88BB7}
+\definecolor{pinkfill}{HTML}{FFF0F7}
+\definecolor{purple}{HTML}{9B7BEA}
+\definecolor{purplefill}{HTML}{F4F0FF}
+\definecolor{green}{HTML}{43A78B}
+\definecolor{greenfill}{HTML}{EAF9F4}
+
+\tikzset{
+  box/.style={
+    draw=ink!22,
+    rounded corners=4pt,
+    very thick,
+    fill=white,
+    text=ink,
+    align=center,
+    minimum height=13mm,
+    text width=34mm,
+    inner sep=5pt
+  },
+  host/.style={box,draw=blue,fill=bluefill},
+  server/.style={box,draw=purple,fill=purplefill},
+  widget/.style={box,draw=pink,fill=pinkfill},
+  result/.style={box,draw=green,fill=greenfill},
+  flow/.style={-{Latex[length=3mm]},very thick,draw=ink!68},
+  return/.style={-{Latex[length=3mm]},very thick,draw=green,dashed},
+  label/.style={font=\sffamily\scriptsize,text=muted,align=center},
+  title/.style={font=\sffamily\bfseries\large,text=ink},
+  body/.style={font=\sffamily\small}
+}
+
+\begin{document}
+\begin{tikzpicture}[node distance=14mm and 15mm]
+  \node[host] (model) {\textbf{ChatGPT Host}\\Model + MCP client};
+  \node[server,right=of model] (http) {\textbf{HTTP boundary}\\\texttt{/mcp} \quad \texttt{/health}\\\texttt{/icon.png}};
+  \node[server,right=of http] (mcp) {\textbf{MCP server}\\Tools + UI resource};
+  \node[widget,right=of mcp] (ui) {\textbf{Inline widget}\\Native DOM + MCP Apps bridge};
+
+  \draw[flow] (model) -- node[label,above]{Streamable HTTP} (http);
+  \draw[flow] (http) -- node[label,above]{validate + dispatch} (mcp);
+  \draw[flow] (mcp) -- node[label,above]{structuredContent\\+ \texttt{ui://} resource} (ui);
+
+  \node[server,below=18mm of http] (config) {\textbf{Configuration core}\\Zod schemas + normalization\\templates + safe bindings};
+  \node[widget,below=18mm of mcp] (interaction) {\textbf{Interaction engine}\\controls + conditions\\wizard + preview + validation};
+  \node[result,below=18mm of ui] (delivery) {\textbf{Result delivery}\\freeze + retry + fallback\\versioned result protocol};
+
+  \draw[flow] (mcp) -- (config);
+  \draw[flow] (config) -- (interaction);
+  \draw[flow] (ui) -- (interaction);
+  \draw[flow] (interaction) -- (delivery);
+
+  \draw[return] (delivery.south) -- ++(0,-10mm) -| node[label,pos=.62,below]{\texttt{updateModelContext} + \texttt{sendMessage}} (model.south);
+
+  \begin{scope}[on background layer]
+    \node[draw=ink!12,rounded corners=7pt,fill=ink!2,fit=(model)(http)(mcp)(ui),inner sep=10mm] (runtime) {};
+    \node[draw=ink!12,rounded corners=7pt,fill=white,fit=(config)(interaction)(delivery),inner sep=8mm] (internals) {};
+  \end{scope}
+
+  \node[title,above=6mm of runtime.north] {InBridge technical architecture};
+  \node[label,anchor=west] at ([xshift=2mm,yshift=-4mm]runtime.north west) {REQUEST / RENDER PATH};
+  \node[label,anchor=west] at ([xshift=2mm,yshift=-4mm]internals.north west) {DECLARATIVE CORE / SUBMISSION STATE MACHINE};
+
+  \node[label,below=17mm of internals.south] (ops) {Vercel Express Functions \quad|\quad GitHub Actions CI \quad|\quad 6-hour production smoke monitor};
+  \draw[draw=ink!18,very thick] ([xshift=-68mm,yshift=3mm]ops.north) -- ([xshift=68mm,yshift=3mm]ops.north);
+\end{tikzpicture}
+\end{document}
