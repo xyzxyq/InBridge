@@ -22,6 +22,8 @@
       <div class="toolbar" aria-label="Theme preview">
         <button type="button" data-set-theme="light">浅色</button>
         <button type="button" data-set-theme="dark">深色</button>
+        <button type="button" data-set-accent="purple">紫色重点色</button>
+        <button type="button" data-set-accent="orange">橙色重点色</button>
       </div>
       <iframe title="InBridge widget" src="/tests/fixtures/widget.html"></iframe>
       <section class="diagnostics">
@@ -33,6 +35,21 @@
       const frame = document.querySelector("iframe");
       const output = document.querySelector("[data-delivery]");
       let activeTheme = "light";
+      let activeAccent = "purple";
+      const accents = {
+        purple: {
+          "--color-text-info": "#7c3aed",
+          "--color-ring-info": "#7c3aed",
+          "--color-border-info": "rgb(124 58 237 / 55%)",
+          "--color-background-info": "rgb(124 58 237 / 12%)"
+        },
+        orange: {
+          "--color-text-info": "#ea580c",
+          "--color-ring-info": "#ea580c",
+          "--color-border-info": "rgb(234 88 12 / 55%)",
+          "--color-background-info": "rgb(234 88 12 / 12%)"
+        }
+      };
       const delivery = { contextUpdates: 0, messages: 0, context: null, message: null };
       const structuredContent = {
         interactionId: "comparison_browser_check",
@@ -81,7 +98,12 @@
             protocolVersion: message.params.protocolVersion,
             hostInfo: { name: "inbridge-comparison-fixture", version: "1.0.0" },
             hostCapabilities: { updateModelContext: { structuredContent: {} }, message: { text: {} } },
-            hostContext: { theme: activeTheme, locale: "zh-CN", platform: "web" }
+            hostContext: {
+              theme: activeTheme,
+              locale: "zh-CN",
+              platform: "web",
+              styles: { variables: accents[activeAccent] }
+            }
           });
           return;
         }
@@ -116,6 +138,17 @@
             jsonrpc: "2.0",
             method: "ui/notifications/host-context-changed",
             params: { theme: activeTheme }
+          }, "*");
+        });
+      });
+
+      document.querySelectorAll("[data-set-accent]").forEach((button) => {
+        button.addEventListener("click", () => {
+          activeAccent = button.dataset.setAccent;
+          frame.contentWindow.postMessage({
+            jsonrpc: "2.0",
+            method: "ui/notifications/host-context-changed",
+            params: { styles: { variables: accents[activeAccent] } }
           }, "*");
         });
       });

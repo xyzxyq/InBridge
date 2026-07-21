@@ -111,7 +111,7 @@ This model works well with serverless deployment and reduces cross-user state le
 
 Vite builds the Widget into one IIFE JavaScript bundle and one CSS asset. When the MCP UI resource is read, the server inlines both files into HTML and returns `text/html;profile=mcp-app`. The current Widget does not require external scripts, styles, images, or network requests.
 
-The Widget follows ChatGPT's active light or dark appearance through MCP Apps `hostContext.theme` and listens for live theme changes. It falls back to the system `prefers-color-scheme` only when the Host omits a theme. Semantic tokens drive surfaces, borders, text, and focus states so a light card never clashes with a dark conversation.
+The Widget follows ChatGPT's active light or dark appearance through MCP Apps `hostContext.theme` and listens for live theme changes. It falls back to the system `prefers-color-scheme` only when the Host omits a theme. Host-provided `--color-*-info` and ring tokens also drive selected cards, radios, switches, sliders, and focus rings, keeping them aligned with the user's ChatGPT accent color; older Hosts receive an accessible blue fallback. Semantic tokens drive every state so cards remain coherent as appearance settings change.
 
 ## MCP surface
 
