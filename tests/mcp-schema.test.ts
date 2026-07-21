@@ -1,7 +1,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { afterEach, describe, expect, it } from "vitest";
-import { APP_ICON_URL, createMcpServer, WIDGET_URI } from "../src/server/mcp.js";
+import { APP_ICON_URL, createMcpServer, PUBLIC_BASE_URL, WIDGET_URI } from "../src/server/mcp.js";
 
 const closeCallbacks: Array<() => Promise<void>> = [];
 
@@ -29,7 +29,7 @@ describe("MCP tool descriptors", () => {
 
     expect(client.getServerVersion()).toMatchObject({
       name: "inbridge",
-      version: "0.13.0",
+      version: "0.13.1",
       icons: [{ src: APP_ICON_URL, mimeType: "image/png", sizes: ["981x1040"] }]
     });
   });
@@ -116,11 +116,11 @@ describe("MCP tool descriptors", () => {
 
     expect(resource?._meta).toMatchObject({
       ui: {
-        domain: "https://mcp.example.com",
+        domain: PUBLIC_BASE_URL,
         prefersBorder: true
       },
       "openai/widgetPrefersBorder": true,
-      "openai/widgetDomain": "https://mcp.example.com"
+      "openai/widgetDomain": PUBLIC_BASE_URL
     });
     expect(resource?._meta?.["openai/widgetDescription"]).toContain("保留用户触发该交互的原始消息");
   });

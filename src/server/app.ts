@@ -10,7 +10,7 @@ export function configureHttpApp(app: Express, siteRoot = path.join(process.cwd(
   app.use(express.json({ limit: "64kb" }));
 
   app.get("/health", (_request, response) => {
-    response.json({ status: "ok", service: "inbridge", version: "0.13.0" });
+    response.json({ status: "ok", service: "inbridge", version: "0.13.1" });
   });
 
   app.get("/icon.png", (_request, response, next) => {
@@ -39,7 +39,7 @@ export function configureHttpApp(app: Express, siteRoot = path.join(process.cwd(
         "Cache-Control": "public, max-age=0, must-revalidate",
         "Content-Security-Policy": [
           "default-src 'self'",
-          "script-src 'self' 'sha256-94d4hPLqMtZEGXwdX0vhLqdHIxxyLTJ5VW73gFbuIOY='",
+          "script-src 'self' 'sha256-r0K+Chfh/HHe1lPm2Z60fThAtVMbGOGR0zbjvI42OiY='",
           "style-src 'self'",
           "img-src 'self' data:",
           "font-src 'self'",

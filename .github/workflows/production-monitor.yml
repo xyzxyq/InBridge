@@ -23,6 +23,12 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run smoke
+      - name: Run private production smoke test when configured
         env:
-          INBRIDGE_BASE_URL: https://mcp.example.com
+          INBRIDGE_BASE_URL: ${{ secrets.INBRIDGE_BASE_URL }}
+        run: |
+          if [ -z "$INBRIDGE_BASE_URL" ]; then
+            echo "::notice::Production monitor skipped because INBRIDGE_BASE_URL is not configured."
+            exit 0
+          fi
+          npm run smoke

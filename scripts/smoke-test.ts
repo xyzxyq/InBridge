@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import { APP_ICON_URL, WIDGET_URI } from "../src/server/mcp.js";
+import { WIDGET_URI } from "../src/server/mcp.js";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const port = 3100 + Math.floor(Math.random() * 500);
@@ -14,7 +14,7 @@ const server = remoteBaseUrl
   ? undefined
   : spawn(process.execPath, [path.join(projectRoot, "dist/server/index.js")], {
       cwd: projectRoot,
-      env: { ...process.env, PORT: String(port) },
+      env: { ...process.env, PORT: String(port), INBRIDGE_PUBLIC_URL: baseUrl },
       stdio: ["ignore", "pipe", "pipe"]
     });
 
@@ -36,12 +36,12 @@ async function waitForHealth(): Promise<void> {
   throw new Error(`Server did not become healthy. ${stderr}`);
 }
 
-const client = new Client({ name: "inbridge-smoke-test", version: "0.13.0" });
+const client = new Client({ name: "inbridge-smoke-test", version: "0.13.1" });
 
 try {
   await waitForHealth();
   const healthResponse = await fetch(`${baseUrl}/health`);
-  assert.deepEqual(await healthResponse.json(), { status: "ok", service: "inbridge", version: "0.13.0" });
+  assert.deepEqual(await healthResponse.json(), { status: "ok", service: "inbridge", version: "0.13.1" });
   const iconResponse = await fetch(`${baseUrl}/icon.png`);
   assert.equal(iconResponse.status, 200);
   assert.match(iconResponse.headers.get("content-type") ?? "", /^image\/png/);
@@ -63,9 +63,9 @@ try {
   await client.connect(transport);
 
   assert.deepEqual(client.getServerVersion()?.icons, [
-    { src: APP_ICON_URL, mimeType: "image/png", sizes: ["981x1040"] }
+    { src: `${baseUrl}/icon.png?v=2`, mimeType: "image/png", sizes: ["981x1040"] }
   ]);
-  assert.equal(client.getServerVersion()?.version, "0.13.0");
+  assert.equal(client.getServerVersion()?.version, "0.13.1");
   assert.match(client.getInstructions() ?? "", /Use InBridge proactively/);
   assert.match(client.getInstructions() ?? "", /do not call list_interaction_templates first/);
 
@@ -200,11 +200,11 @@ try {
   assert("text" in widget && widget.text.includes("<script>") && widget.text.length > 1_000);
   assert.equal(
     (widget._meta as { ui?: { domain?: string } } | undefined)?.ui?.domain,
-    "https://mcp.example.com"
+    baseUrl
   );
 
   console.log(
-    "Smoke test passed: landing page, assets, v0.13 MCP guidance, proactive tool metadata, rendering, and resources/read are operational."
+    "Smoke test passed: landing page, assets, v0.13.1 private-origin metadata, proactive tools, rendering, and resources/read are operational."
   );
 } finally {
   await client.close().catch(() => undefined);

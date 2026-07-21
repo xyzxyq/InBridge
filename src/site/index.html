@@ -7,17 +7,16 @@
     <meta name="description" content="InBridge is an open-source MCP App that brings structured choices, configuration panels, confirmations, wizards and real-time previews directly into ChatGPT conversations." />
     <meta property="og:title" content="InBridge — Interactive UI Bridge for ChatGPT" />
     <meta property="og:description" content="让选择、配置与确认直接发生在 ChatGPT 对话里。" />
-    <meta property="og:image" content="https://mcp.example.com/assets/og-cover.png" />
+    <meta property="og:image" content="/assets/og-cover.png" />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://mcp.example.com/" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="InBridge — Interactive UI Bridge for ChatGPT" />
     <meta name="twitter:description" content="让选择、配置与确认直接发生在 ChatGPT 对话里。" />
-    <meta name="twitter:image" content="https://mcp.example.com/assets/og-cover.png" />
+    <meta name="twitter:image" content="/assets/og-cover.png" />
     <link rel="icon" type="image/png" href="/assets/favicon.png" />
     <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
     <title>InBridge — Interactive UI Bridge for ChatGPT</title>
-    <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"InBridge","applicationCategory":"DeveloperApplication","operatingSystem":"Web","isAccessibleForFree":true,"codeRepository":"https://github.com/xyzxyq/InBridge","url":"https://mcp.example.com/"}</script>
+    <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"InBridge","applicationCategory":"DeveloperApplication","operatingSystem":"Web","isAccessibleForFree":true,"codeRepository":"https://github.com/xyzxyq/InBridge"}</script>
   </head>
   <body>
     <a class="skip-link" href="#main">跳至主要内容</a>
@@ -43,10 +42,10 @@
           <h1 id="hero-title">让对话，<br />不再止于文本。</h1>
           <p class="hero-lead">InBridge 把选择、配置、确认与实时预览直接带入 ChatGPT 对话。模型提出交互，用户完成操作，结构化结果自动回到模型。</p>
           <div class="hero-actions">
-            <a class="button button-primary" href="#quick-start">立即体验 InBridge</a>
+            <a class="button button-primary" href="#quick-start">部署自己的 InBridge</a>
             <a class="button button-secondary" href="https://github.com/xyzxyq/InBridge" target="_blank" rel="noopener noreferrer">在 GitHub 查看源码 <span aria-hidden="true">↗</span></a>
           </div>
-          <div class="service-status"><span aria-hidden="true"></span> 生产实例在线 · 无状态 · 开源</div>
+          <div class="service-status"><span aria-hidden="true"></span> 自托管优先 · 无状态 · 开源</div>
         </div>
         <div class="hero-visual reveal" data-hero-parallax>
           <div class="icon-base glass-panel" data-glass>
@@ -101,10 +100,10 @@
 
       <section class="section-shell quick-start" id="quick-start" aria-labelledby="quick-title">
         <div class="quick-panel glass-panel reveal" data-glass>
-          <div class="quick-copy"><p class="eyebrow">QUICK START</p><h2 id="quick-title">五分钟，把 InBridge<br />接入 ChatGPT。</h2><p>公共实例适合体验与轻量使用。长期稳定使用推荐从 GitHub 部署自己的实例。</p><div class="quick-links"><a href="https://github.com/xyzxyq/InBridge#接入-chatgpt" target="_blank" rel="noopener noreferrer">查看部署文档 ↗</a><a href="https://github.com/xyzxyq/InBridge" target="_blank" rel="noopener noreferrer">Star on GitHub ↗</a></div></div>
+          <div class="quick-copy"><p class="eyebrow">QUICK START</p><h2 id="quick-title">五分钟，把 InBridge<br />接入 ChatGPT。</h2><p>InBridge 不提供共享公共实例。请从 GitHub 部署到你自己的 Vercel 或 Node.js 服务，限额、日志与访问地址完全由你掌控。</p><div class="quick-links"><a href="https://github.com/xyzxyq/InBridge#部署自己的实例" target="_blank" rel="noopener noreferrer">查看部署文档 ↗</a><a href="https://github.com/xyzxyq/InBridge" target="_blank" rel="noopener noreferrer">Star on GitHub ↗</a></div></div>
           <div class="setup-card">
-            <ol><li><span>1</span><div><b>打开 Developer Mode</b><small>在 ChatGPT 设置中启用开发者模式。</small></div></li><li><span>2</span><div><b>创建 Developer App</b><small>添加一个新的自定义 MCP App。</small></div></li><li><span>3</span><div><b>填写 MCP Endpoint</b><small>复制下方生产地址并保存。</small></div></li><li><span>4</span><div><b>启用 InBridge</b><small>在新对话中启用并开始使用。</small></div></li></ol>
-            <div class="endpoint-box"><code data-endpoint>https://mcp.example.com/mcp</code><button type="button" data-copy-endpoint>复制</button></div><p class="copy-status" data-copy-status aria-live="polite"></p>
+            <ol><li><span>1</span><div><b>部署自己的实例</b><small>Fork 仓库并导入 Vercel，或部署到 Node.js 服务。</small></div></li><li><span>2</span><div><b>验证服务</b><small>访问你自己域名下的 /health。</small></div></li><li><span>3</span><div><b>填写 MCP Endpoint</b><small>使用你自己的 HTTPS 域名加 /mcp。</small></div></li><li><span>4</span><div><b>启用 InBridge</b><small>在 ChatGPT 新对话中启用并开始使用。</small></div></li></ol>
+            <div class="endpoint-box"><code>https://&lt;你的域名&gt;/mcp</code><a href="https://github.com/xyzxyq/InBridge#部署自己的实例" target="_blank" rel="noopener noreferrer">部署指南 ↗</a></div>
           </div>
         </div>
       </section>

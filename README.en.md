@@ -7,9 +7,7 @@
   <p>
     <a href="README.md">中文</a>
     ·
-    <a href="https://mcp.example.com/">Website</a>
-    ·
-    <a href="https://mcp.example.com/health">Production status</a>
+    <a href="#deploy-your-own-instance">Deployment guide</a>
     ·
     <a href="docs/TEMPLATES.md">Templates</a>
     ·
@@ -18,7 +16,7 @@
 
   <p>
     <a href="https://github.com/xyzxyq/InBridge/actions/workflows/ci.yml"><img src="https://github.com/xyzxyq/InBridge/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
-    <img src="https://img.shields.io/badge/version-0.13.0-8b5cf6" alt="Version 0.13.0" />
+    <img src="https://img.shields.io/badge/version-0.13.1-8b5cf6" alt="Version 0.13.1" />
     <img src="https://img.shields.io/badge/Node.js-22.x-339933?logo=nodedotjs&logoColor=white" alt="Node.js 22.x" />
     <img src="https://img.shields.io/badge/MCP%20Apps-1.7.4-2563eb" alt="MCP Apps 1.7.4" />
     <img src="https://img.shields.io/badge/TypeScript-5.9-3178c6?logo=typescript&logoColor=white" alt="TypeScript 5.9" />
@@ -46,7 +44,7 @@ The end-to-end flow is:
 6. `sendMessage` triggers the next model turn.
 7. The model reads the result and continues the task.
 
-The full loop has been validated in ChatGPT Developer Mode and is deployed on Vercel.
+The full loop has been validated in ChatGPT Developer Mode and includes deployment support for Vercel and standard Node.js hosts. This repository does not provide a shared public instance; each user should deploy and manage their own MCP endpoint.
 
 ## Why InBridge
 
@@ -125,10 +123,10 @@ The Widget follows ChatGPT's active light or dark appearance through MCP Apps `h
 
 | Endpoint | Method | Purpose |
 | --- | --- | --- |
-| `https://mcp.example.com/` | `GET` | Product website and local interaction demo |
-| `https://mcp.example.com/mcp` | `POST` | Stateless Streaming HTTP MCP endpoint |
-| `https://mcp.example.com/health` | `GET` | Service health and version |
-| `https://mcp.example.com/icon.png` | `GET` | Project and MCP service icon |
+| `https://<your-domain>/` | `GET` | Product page and local interaction demo |
+| `https://<your-domain>/mcp` | `POST` | Stateless Streaming HTTP MCP endpoint |
+| `https://<your-domain>/health` | `GET` | Service health and version |
+| `https://<your-domain>/icon.png` | `GET` | Project and MCP service icon |
 
 ### Tools
 
@@ -247,14 +245,43 @@ npm run dev
 
 `tsx watch` restarts the server on server-side changes. Re-run `npm run build:ui` after UI changes because the server reads the Widget bundle from `dist/ui`.
 
+## Deploy your own instance
+
+InBridge does not provide a shared public MCP endpoint. Fork the repository and deploy it to your own Vercel account so usage, free-tier limits, logs, and domains remain under your control.
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fxyzxyq%2FInBridge)
+
+### Vercel
+
+1. Fork this repository or click **Deploy with Vercel** above.
+2. Import your fork into Vercel and keep the repository's `vercel.json` configuration.
+3. After deployment, open `https://<your-domain>/health` and verify that it returns `status: "ok"`.
+4. Your MCP endpoint is `https://<your-domain>/mcp`.
+5. If you use a custom domain, set the production environment variable `INBRIDGE_PUBLIC_URL=https://<your-domain>` and redeploy.
+
+When `INBRIDGE_PUBLIC_URL` is unset on Vercel, InBridge automatically reads `VERCEL_PROJECT_PRODUCTION_URL`. On other Node.js hosts, set `INBRIDGE_PUBLIC_URL` explicitly so MCP icon and Widget metadata point to your public HTTPS origin.
+
+### Standard Node.js host
+
+```bash
+git clone https://github.com/xyzxyq/InBridge.git
+cd InBridge
+npm ci
+npm run build
+INBRIDGE_PUBLIC_URL=https://mcp.example.com PORT=3000 npm start
+```
+
+Configure HTTPS through your hosting platform or reverse proxy, then verify `/health` and `/mcp`. Do not depend on another person's demo or private instance for ongoing use.
+
 ## Connect to ChatGPT
 
-1. Enable Developer Mode in ChatGPT settings.
-2. Create or edit a custom MCP App in the Apps/Connectors settings.
-3. Set the MCP server URL to `https://mcp.example.com/mcp`.
-4. Save, refresh, or reconnect the app.
-5. Enable InBridge in a new conversation.
-6. Add the instruction below to **Custom instructions** in ChatGPT **Personalization** settings so ChatGPT can decide when to invoke InBridge proactively.
+1. Deploy your own InBridge instance as described above.
+2. Enable Developer Mode in ChatGPT settings.
+3. Create or edit a custom MCP App in the Apps/Connectors settings.
+4. Set the MCP server URL to `https://<your-domain>/mcp`.
+5. Save, refresh, or reconnect the app.
+6. Enable InBridge in a new conversation.
+7. Add the instruction below to **Custom instructions** in ChatGPT **Personalization** settings so ChatGPT can decide when to invoke InBridge proactively.
 
 ### Recommended personalization instruction
 
@@ -374,6 +401,7 @@ InBridge/
 │   │   ├── app.ts               # Express app and routes
 │   │   ├── http.ts              # Logging, headers, safe errors
 │   │   ├── mcp.ts               # MCP tools, resource, identity
+│   │   ├── public-url.ts        # Self-hosted public-origin resolution
 │   │   ├── normalize.ts         # Interaction normalization
 │   │   ├── schemas.ts           # Declarative whitelist schemas
 │   │   └── templates.ts         # Template catalog and builders
@@ -413,7 +441,7 @@ InBridge/
 
 ## Deployment and operations
 
-The repository is connected to Vercel. A push to `main` triggers a production build, and Vercel runs the following gate before replacing production:
+After connecting your fork to Vercel, pushes to its production branch trigger a build. Vercel runs the following gate before replacing production:
 
 ```text
 npm run verify
@@ -423,7 +451,7 @@ npm run build
 Vercel Express Function
 ```
 
-GitHub Actions applies the same gate to pushes and pull requests. A separate Production monitor runs the full remote smoke test every six hours.
+GitHub Actions applies the same gate to pushes and pull requests. To enable the private six-hour production monitor, add an Actions Secret named `INBRIDGE_BASE_URL` to your repository with your own site origin; the workflow does not publish that address in source.
 
 Manual production deployment:
 

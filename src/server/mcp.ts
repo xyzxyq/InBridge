@@ -9,6 +9,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { normalizeInteraction } from "./normalize.js";
 import { interactionConfigSchema, normalizedInteractionSchema } from "./schemas.js";
+import { resolvePublicBaseUrl } from "./public-url.js";
 import {
   buildInteractionTemplate,
   interactionTemplateRequestSchema,
@@ -18,7 +19,8 @@ import {
 } from "./templates.js";
 
 export const WIDGET_URI = "ui://inbridge/interaction-v12.html";
-export const APP_ICON_URL = "https://mcp.example.com/icon.png?v=2";
+export const PUBLIC_BASE_URL = resolvePublicBaseUrl();
+export const APP_ICON_URL = `${PUBLIC_BASE_URL}/icon.png?v=2`;
 
 const RENDER_TOOL_META = {
   ui: { resourceUri: WIDGET_URI, visibility: ["model", "app"] as Array<"model" | "app"> },
@@ -73,7 +75,7 @@ async function loadWidgetHtml(): Promise<string> {
 
 export function createMcpServer(): McpServer {
   const server = new McpServer(
-    { name: "inbridge", version: "0.13.0", icons: APP_ICONS },
+    { name: "inbridge", version: "0.13.1", icons: APP_ICONS },
     {
       instructions:
         "Use InBridge proactively whenever the user needs to choose among options, compare plans, configure multiple parameters, set preferences, approve or reject an action, or provide other structured input. Prefer an interactive panel over a long plain-text option list when it reduces ambiguity or effort. For decision, confirmation, experiment_config, theme_config, or comparison, call render_interaction_template directly—do not call list_interaction_templates first. For novel forms, call ask_user_interactively. After rendering, stop and wait for the user to confirm or cancel before continuing. Use list_interaction_templates only as a rare fallback when no template can be inferred. Preserve mathematical notation as LaTeX, preferably with $...$ inline and $$...$$ for display."
@@ -88,7 +90,7 @@ export function createMcpServer(): McpServer {
         text: await loadWidgetHtml(),
         _meta: {
           ui: {
-            domain: "https://mcp.example.com",
+            domain: PUBLIC_BASE_URL,
             prefersBorder: true,
             csp: {
               connectDomains: [],
@@ -98,7 +100,7 @@ export function createMcpServer(): McpServer {
           "openai/widgetDescription":
             "InBridge 在当前对话中显示一次性结构化选择，并保留用户触发该交互的原始消息。",
           "openai/widgetPrefersBorder": true,
-          "openai/widgetDomain": "https://mcp.example.com"
+          "openai/widgetDomain": PUBLIC_BASE_URL
         }
       }
     ]

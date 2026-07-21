@@ -308,7 +308,7 @@ git commit -m "release: ship multi-step wizard"
 git push origin main
 ```
 
-Deploy the resulting `main` revision to Vercel, run the production smoke test against `https://mcp.example.com`, verify `/health` reports `0.9.0`, and wait for GitHub CI and production monitor success.
+Deploy the resulting `main` revision to Vercel, run the production smoke test against the private URL supplied through `INBRIDGE_BASE_URL`, verify `/health` reports `0.9.0`, and wait for GitHub CI and production monitor success.
 
 - [ ] **Step 6: Ask for ChatGPT UAT**
 
