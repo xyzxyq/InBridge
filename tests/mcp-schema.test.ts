@@ -1,7 +1,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { afterEach, describe, expect, it } from "vitest";
-import { APP_ICON_URL, createMcpServer } from "../src/server/mcp.js";
+import { APP_ICON_URL, createMcpServer, WIDGET_URI } from "../src/server/mcp.js";
 
 const closeCallbacks: Array<() => Promise<void>> = [];
 
@@ -29,7 +29,7 @@ describe("MCP tool descriptors", () => {
 
     expect(client.getServerVersion()).toMatchObject({
       name: "inbridge",
-      version: "0.10.0",
+      version: "0.11.0",
       icons: [{ src: APP_ICON_URL, mimeType: "image/png", sizes: ["981x1040"] }]
     });
   });
@@ -48,6 +48,47 @@ describe("MCP tool descriptors", () => {
         interactionId: expect.objectContaining({})
       }
     });
+  });
+
+  it("publishes render tools as public conversation-visible UI tools", async () => {
+    const client = await connectedClient();
+    const result = await client.listTools();
+
+    for (const name of ["render_interaction_template", "render_interaction"]) {
+      const tool = result.tools.find((candidate) => candidate.name === name);
+      expect(tool).toMatchObject({
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          openWorldHint: false,
+          idempotentHint: true
+        },
+        _meta: {
+          ui: {
+            resourceUri: "ui://inbridge/interaction-v11.html",
+            visibility: ["model", "app"]
+          },
+          "openai/outputTemplate": "ui://inbridge/interaction-v11.html",
+          "openai/visibility": "public"
+        }
+      });
+    }
+  });
+
+  it("describes the public widget and its conversation-preserving intent", async () => {
+    const client = await connectedClient();
+    const result = await client.readResource({ uri: WIDGET_URI });
+    const resource = result.contents[0];
+
+    expect(resource?._meta).toMatchObject({
+      ui: {
+        domain: "https://mcp.example.com",
+        prefersBorder: true
+      },
+      "openai/widgetPrefersBorder": true,
+      "openai/widgetDomain": "https://mcp.example.com"
+    });
+    expect(resource?._meta?.["openai/widgetDescription"]).toContain("保留用户触发该交互的原始消息");
   });
 
   it("renders the production experiment configuration through the exported schema", async () => {

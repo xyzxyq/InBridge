@@ -17,8 +17,23 @@ import {
   templateCatalogOutputSchema
 } from "./templates.js";
 
-export const WIDGET_URI = "ui://inbridge/interaction-v10.html";
+export const WIDGET_URI = "ui://inbridge/interaction-v11.html";
 export const APP_ICON_URL = "https://mcp.example.com/icon.png?v=2";
+
+const RENDER_TOOL_META = {
+  ui: { resourceUri: WIDGET_URI, visibility: ["model", "app"] as Array<"model" | "app"> },
+  "openai/outputTemplate": WIDGET_URI,
+  "openai/visibility": "public",
+  "openai/toolInvocation/invoking": "正在准备交互选项…",
+  "openai/toolInvocation/invoked": "交互选项已准备好"
+};
+
+const RENDER_TOOL_ANNOTATIONS = {
+  readOnlyHint: true,
+  destructiveHint: false,
+  openWorldHint: false,
+  idempotentHint: true
+};
 
 const APP_ICONS = [
   {
@@ -52,7 +67,7 @@ async function loadWidgetHtml(): Promise<string> {
 
 export function createMcpServer(): McpServer {
   const server = new McpServer(
-    { name: "inbridge", version: "0.10.0", icons: APP_ICONS },
+    { name: "inbridge", version: "0.11.0", icons: APP_ICONS },
     {
       instructions:
         "Prefer render_interaction_template when decision, confirmation, experiment_config, or theme_config matches the task. Use list_interaction_templates when unsure. Use render_interaction only for novel forms that need custom controls. After rendering, wait for the user to confirm or cancel in the inline panel."
@@ -73,7 +88,11 @@ export function createMcpServer(): McpServer {
               connectDomains: [],
               resourceDomains: []
             }
-          }
+          },
+          "openai/widgetDescription":
+            "InBridge 在当前对话中显示一次性结构化选择，并保留用户触发该交互的原始消息。",
+          "openai/widgetPrefersBorder": true,
+          "openai/widgetDomain": "https://mcp.example.com"
         }
       }
     ]
@@ -108,7 +127,8 @@ export function createMcpServer(): McpServer {
         "Render a validated, consistent inline interaction from a named template. Prefer this over render_interaction for common decisions, confirmations, experiment configuration, and theme configuration.",
       inputSchema: interactionTemplateToolInputSchema.shape,
       outputSchema: normalizedInteractionSchema,
-      _meta: { ui: { resourceUri: WIDGET_URI } }
+      annotations: RENDER_TOOL_ANNOTATIONS,
+      _meta: RENDER_TOOL_META
     },
     async (input) => {
       const request = interactionTemplateRequestSchema.parse(input);
@@ -134,7 +154,8 @@ export function createMcpServer(): McpServer {
         "Render an inline decision panel when the user needs to choose or confirm one or more options. Use this instead of asking for a plain-text response when structured interaction is materially clearer.",
       inputSchema: interactionConfigSchema,
       outputSchema: normalizedInteractionSchema,
-      _meta: { ui: { resourceUri: WIDGET_URI } }
+      annotations: RENDER_TOOL_ANNOTATIONS,
+      _meta: RENDER_TOOL_META
     },
     async (input) => {
       const normalized = normalizeInteraction(input);

@@ -16,7 +16,7 @@
 
   <p>
     <a href="https://github.com/xyzxyq/InBridge/actions/workflows/ci.yml"><img src="https://github.com/xyzxyq/InBridge/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
-    <img src="https://img.shields.io/badge/version-0.10.0-8b5cf6" alt="Version 0.10.0" />
+    <img src="https://img.shields.io/badge/version-0.11.0-8b5cf6" alt="Version 0.11.0" />
     <img src="https://img.shields.io/badge/Node.js-22.x-339933?logo=nodedotjs&logoColor=white" alt="Node.js 22.x" />
     <img src="https://img.shields.io/badge/MCP%20Apps-1.7.4-2563eb" alt="MCP Apps 1.7.4" />
     <img src="https://img.shields.io/badge/TypeScript-5.9-3178c6?logo=typescript&logoColor=white" alt="TypeScript 5.9" />
@@ -36,7 +36,7 @@ The end-to-end flow is:
 1. The model calls an InBridge tool.
 2. ChatGPT loads the inline Widget.
 3. The user selects, configures, confirms, or cancels.
-4. The Widget freezes the result to prevent duplicate or mutated submissions; after success, a reselect action replaces the one-time submit controls.
+4. The Widget freezes the result to prevent duplicate or mutated submissions; after success, a reselect action replaces the one-time submit controls and can be cancelled locally.
 5. `updateModelContext` writes the structured result into context.
 6. `sendMessage` triggers the next model turn.
 7. The model reads the result and continues the task.
@@ -172,7 +172,9 @@ The Widget reports four delivery outcomes:
 | `context_only` | Context was updated but the next turn could not be triggered; retry is available |
 | `manual_copy` | Neither Host capability was available; retry and copyable JSON are provided |
 
-Once submission starts, values are frozen. Retrying sends the same immutable result instead of rereading the form. After successful delivery, submit and cancel disappear and only **Reselect** remains. Reselecting restores editing for a corrected submission without restoring cancel, keeping the one-time interaction unambiguous.
+Once submission starts, values are frozen. Retrying sends the same immutable result instead of rereading the form. After successful delivery, submit and the original cancel action disappear and only **Reselect** remains. Reselecting enters a local draft state with **Cancel reselection**. Cancelling restores the prior control values, wizard step, completion message, and frozen result without calling `updateModelContext` or `sendMessage`; only a new confirmation is delivered to GPT.
+
+Render tools explicitly publish standard `ui.visibility: ["model", "app"]` and ChatGPT-compatible `openai/visibility: "public"`, together with a widget description and invocation status. This lets the Host present the component as a public conversation tool; the Widget renders only its tool result and does not manipulate or replace the surrounding user message.
 
 ## Security model
 

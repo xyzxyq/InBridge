@@ -1,4 +1,4 @@
-export type InteractionPhase = "editing" | "submitting" | "completed" | "recovery";
+export type InteractionPhase = "editing" | "reselecting" | "submitting" | "completed" | "recovery";
 
 export interface InteractionLifecycle {
   phase: InteractionPhase;
@@ -10,12 +10,14 @@ export type InteractionLifecycleEvent =
   | "delivery_success"
   | "delivery_failure"
   | "retry"
-  | "reselect";
+  | "reselect"
+  | "cancel_reselect";
 
 export interface InteractionPresentation {
   formDisabled: boolean;
   showPrimaryActions: boolean;
   showCancel: boolean;
+  showCancelReselect: boolean;
   showReselect: boolean;
 }
 
@@ -27,7 +29,7 @@ export function transitionInteractionLifecycle(
   state: InteractionLifecycle,
   event: InteractionLifecycleEvent
 ): InteractionLifecycle {
-  if (state.phase === "editing" && event === "submit") {
+  if ((state.phase === "editing" || state.phase === "reselecting") && event === "submit") {
     return { ...state, phase: "submitting" };
   }
   if (state.phase === "submitting" && event === "delivery_success") {
@@ -40,17 +42,21 @@ export function transitionInteractionLifecycle(
     return { ...state, phase: "submitting" };
   }
   if (state.phase === "completed" && event === "reselect") {
-    return { phase: "editing", hasCompletedOnce: true };
+    return { phase: "reselecting", hasCompletedOnce: true };
+  }
+  if (state.phase === "reselecting" && event === "cancel_reselect") {
+    return { phase: "completed", hasCompletedOnce: true };
   }
   return state;
 }
 
 export function interactionPresentation(state: InteractionLifecycle): InteractionPresentation {
-  const editing = state.phase === "editing";
+  const editable = state.phase === "editing" || state.phase === "reselecting";
   return {
-    formDisabled: !editing,
-    showPrimaryActions: editing,
-    showCancel: editing && !state.hasCompletedOnce,
+    formDisabled: !editable,
+    showPrimaryActions: editable,
+    showCancel: state.phase === "editing" && !state.hasCompletedOnce,
+    showCancelReselect: state.phase === "reselecting",
     showReselect: state.phase === "completed"
   };
 }

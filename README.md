@@ -16,7 +16,7 @@
 
   <p>
     <a href="https://github.com/xyzxyq/InBridge/actions/workflows/ci.yml"><img src="https://github.com/xyzxyq/InBridge/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
-    <img src="https://img.shields.io/badge/version-0.10.0-8b5cf6" alt="版本 0.10.0" />
+    <img src="https://img.shields.io/badge/version-0.11.0-8b5cf6" alt="版本 0.11.0" />
     <img src="https://img.shields.io/badge/Node.js-22.x-339933?logo=nodedotjs&logoColor=white" alt="Node.js 22.x" />
     <img src="https://img.shields.io/badge/MCP%20Apps-1.7.4-2563eb" alt="MCP Apps 1.7.4" />
     <img src="https://img.shields.io/badge/TypeScript-5.9-3178c6?logo=typescript&logoColor=white" alt="TypeScript 5.9" />
@@ -36,7 +36,7 @@ InBridge 是一个面向 ChatGPT 的 MCP App。当模型需要用户选择方案
 1. 模型调用 InBridge 工具；
 2. ChatGPT 加载内联 Widget；
 3. 用户选择、填写或取消；
-4. Widget 冻结本次结果，防止重复提交和提交中篡改；成功后用“重新选择”替换一次性提交操作；
+4. Widget 冻结本次结果，防止重复提交和提交中篡改；成功后用“重新选择”替换一次性提交操作，并允许在本地撤销重新选择；
 5. 结果通过 `updateModelContext` 写入模型上下文；
 6. Widget 通过 `sendMessage` 触发下一轮；
 7. 模型读取结构化结果并继续任务。
@@ -172,7 +172,9 @@ Widget 根据 Host 能力和调用结果区分四种交付状态：
 | `context_only` | 结果已写入上下文，但触发消息失败，可重试 |
 | `manual_copy` | 两种 Host 能力都不可用，可重试或复制 JSON |
 
-提交开始后，表单值会被冻结。同一份冻结结果可以安全重试，不会再次读取或修改表单内容。成功交付后，提交与取消操作会从界面移除，只保留“重新选择”；重新进入编辑态后可修正并再次提交，但不会恢复取消按钮，从而避免对一次性交互产生歧义。
+提交开始后，表单值会被冻结。同一份冻结结果可以安全重试，不会再次读取或修改表单内容。成功交付后，提交与原始取消操作会从界面移除，只保留“重新选择”。重新选择会进入本地草稿态，并显示“取消重新选择”：用户若取消，Widget 会恢复此前的控件值、向导步骤、完成提示和冻结结果，不调用 `updateModelContext` 或 `sendMessage`；只有再次确认提交才会向 GPT 交付新结果。
+
+渲染工具显式声明标准 `ui.visibility: ["model", "app"]` 和 ChatGPT 兼容的 `openai/visibility: "public"`，并提供 Widget 描述与调用状态，使 Host 将它作为公开对话工具呈现；Widget 自身只渲染工具结果，不会操作或替代外围对话中的用户消息。
 
 ## 安全边界
 

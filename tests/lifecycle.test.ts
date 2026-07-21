@@ -11,6 +11,7 @@ describe("interaction lifecycle", () => {
       formDisabled: false,
       showPrimaryActions: true,
       showCancel: true,
+      showCancelReselect: false,
       showReselect: false
     });
   });
@@ -24,19 +25,36 @@ describe("interaction lifecycle", () => {
       formDisabled: true,
       showPrimaryActions: false,
       showCancel: false,
+      showCancelReselect: false,
       showReselect: true
     });
   });
 
-  it("restores editing without restoring cancel when the user reselects", () => {
+  it("enters a reversible draft mode when the user reselects", () => {
     const completed = { phase: "completed", hasCompletedOnce: true } as const;
-    const editingAgain = transitionInteractionLifecycle(completed, "reselect");
+    const reselecting = transitionInteractionLifecycle(completed, "reselect");
 
-    expect(interactionPresentation(editingAgain)).toEqual({
+    expect(reselecting.phase).toBe("reselecting");
+    expect(interactionPresentation(reselecting)).toEqual({
       formDisabled: false,
       showPrimaryActions: true,
       showCancel: false,
+      showCancelReselect: true,
       showReselect: false
+    });
+  });
+
+  it("returns to the completed presentation when reselection is cancelled", () => {
+    const reselecting = { phase: "reselecting", hasCompletedOnce: true } as const;
+    const restored = transitionInteractionLifecycle(reselecting, "cancel_reselect");
+
+    expect(restored).toEqual({ phase: "completed", hasCompletedOnce: true });
+    expect(interactionPresentation(restored)).toEqual({
+      formDisabled: true,
+      showPrimaryActions: false,
+      showCancel: false,
+      showCancelReselect: false,
+      showReselect: true
     });
   });
 

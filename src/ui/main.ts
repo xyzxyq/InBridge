@@ -143,6 +143,16 @@ interface SummaryPreview {
 
 type Preview = ThemeCardPreview | SummaryPreview;
 
+type StatusKind = "info" | "success" | "error";
+
+interface ReselectionSnapshot {
+  values: Record<string, VisibilityValue>;
+  currentStepIndex: number;
+  result: InteractionResult;
+  statusMessage: string;
+  statusKind: StatusKind;
+}
+
 interface Interaction {
   interactionId: string;
   title: string;
@@ -158,10 +168,11 @@ const rootElement = document.querySelector<HTMLElement>("#app");
 if (!rootElement) throw new Error("Missing #app root");
 const root: HTMLElement = rootElement;
 
-const bridge = new App({ name: "inbridge-widget", version: "0.10.0" });
+const bridge = new App({ name: "inbridge-widget", version: "0.11.0" });
 let interaction: Interaction | undefined;
 let lifecycle: InteractionLifecycle = initialInteractionLifecycle();
 let pendingResult: InteractionResult | undefined;
+let reselectionSnapshot: ReselectionSnapshot | undefined;
 let currentStepIndex = 0;
 let hostTheme: InBridgeTheme | undefined;
 
@@ -184,7 +195,7 @@ systemTheme.addEventListener("change", () => {
   if (!hostTheme) syncTheme();
 });
 
-function setStatus(message: string, kind: "info" | "success" | "error" = "info"): void {
+function setStatus(message: string, kind: StatusKind = "info"): void {
   const status = root.querySelector<HTMLElement>("[data-status]");
   if (!status) return;
   status.textContent = message;
@@ -322,12 +333,14 @@ function syncLifecycleView(): void {
   const form = root.querySelector<HTMLFormElement>("form");
   const actions = root.querySelector<HTMLElement>("[data-actions]");
   const cancel = root.querySelector<HTMLButtonElement>("[data-cancel-action]");
+  const cancelReselect = root.querySelector<HTMLButtonElement>("[data-cancel-reselect]");
   const completionActions = root.querySelector<HTMLElement>("[data-completion-actions]");
 
   setFormDisabled(presentation.formDisabled);
   if (form) form.dataset.phase = lifecycle.phase;
   if (actions) actions.hidden = !presentation.showPrimaryActions;
   if (cancel) cancel.hidden = !presentation.showCancel;
+  if (cancelReselect) cancelReselect.hidden = !presentation.showCancelReselect;
   if (completionActions) completionActions.hidden = !presentation.showReselect;
 }
 
@@ -390,11 +403,12 @@ async function deliverPendingResult(): Promise<void> {
 }
 
 async function submit(status: InteractionResult["status"]): Promise<void> {
-  if (!interaction || lifecycle.phase !== "editing" || pendingResult) return;
+  if (!interaction || (lifecycle.phase !== "editing" && lifecycle.phase !== "reselecting") || pendingResult) return;
   const values = status === "confirmed" ? collectValues() : {};
   if (!values) return;
 
   pendingResult = createInteractionResult(interaction.interactionId, status, values);
+  reselectionSnapshot = undefined;
   lifecycle = transitionInteractionLifecycle(lifecycle, "submit");
   syncLifecycleView();
   await deliverPendingResult();
@@ -408,7 +422,17 @@ function retryPendingResult(): void {
 }
 
 function reselect(): void {
-  if (lifecycle.phase !== "completed") return;
+  if (lifecycle.phase !== "completed" || !pendingResult) return;
+  const status = root.querySelector<HTMLElement>("[data-status]");
+  reselectionSnapshot = {
+    values: readAllValues(),
+    currentStepIndex,
+    result: pendingResult,
+    statusMessage: status?.textContent ?? "",
+    statusKind: status?.dataset.kind === "success" || status?.dataset.kind === "error"
+      ? status.dataset.kind
+      : "info"
+  };
   lifecycle = transitionInteractionLifecycle(lifecycle, "reselect");
   pendingResult = undefined;
   hideRecovery();
@@ -419,6 +443,55 @@ function reselect(): void {
   const focusTarget = root.querySelector<HTMLElement>("input:checked")
     ?? root.querySelector<HTMLElement>('select, input:not([type="hidden"])');
   focusTarget?.focus();
+}
+
+function restoreControlValues(values: Readonly<Record<string, VisibilityValue>>): void {
+  if (!interaction) return;
+  for (const control of interaction.controls) {
+    if (!Object.hasOwn(values, control.id)) continue;
+    const container = controlContainer(control.id);
+    const value = values[control.id];
+    if (!container) continue;
+
+    if (control.type === "radio" || control.type === "comparison_cards") {
+      container.querySelectorAll<HTMLInputElement>('input[type="radio"]').forEach((input) => {
+        input.checked = input.value === value;
+      });
+      if (control.type === "comparison_cards") refreshComparisonSelection(container);
+      continue;
+    }
+    if (control.type === "checkbox_group") {
+      const checkedValues = Array.isArray(value) ? new Set(value) : new Set<string>();
+      container.querySelectorAll<HTMLInputElement>('input[type="checkbox"]').forEach((input) => {
+        input.checked = checkedValues.has(input.value);
+      });
+      continue;
+    }
+    const input = container.querySelector<HTMLInputElement>("input");
+    if (control.type === "select") {
+      const select = container.querySelector<HTMLSelectElement>("select");
+      if (select) select.value = typeof value === "string" ? value : "";
+    } else if (control.type === "switch") {
+      if (input) input.checked = value === true;
+    } else if (input && value !== undefined && value !== null) {
+      input.value = String(value);
+      const output = container.querySelector<HTMLOutputElement>("output");
+      if (output) output.value = control.type === "color" ? String(value).toUpperCase() : String(value);
+    }
+  }
+}
+
+function cancelReselection(): void {
+  if (lifecycle.phase !== "reselecting" || !reselectionSnapshot) return;
+  const snapshot = reselectionSnapshot;
+  restoreControlValues(snapshot.values);
+  currentStepIndex = snapshot.currentStepIndex;
+  pendingResult = snapshot.result;
+  reselectionSnapshot = undefined;
+  lifecycle = transitionInteractionLifecycle(lifecycle, "cancel_reselect");
+  syncLifecycleView();
+  refreshWizardView();
+  setStatus(snapshot.statusMessage, snapshot.statusKind);
 }
 
 function appendDescription(container: HTMLElement, description?: string): void {
@@ -779,6 +852,7 @@ function render(config: Interaction): void {
   interaction = config;
   lifecycle = initialInteractionLifecycle();
   pendingResult = undefined;
+  reselectionSnapshot = undefined;
   currentStepIndex = 0;
   root.replaceChildren();
 
@@ -874,6 +948,13 @@ function render(config: Interaction): void {
     cancel.addEventListener("click", () => void submit("cancelled"));
     actions.append(cancel);
   }
+  const cancelReselect = document.createElement("button");
+  cancelReselect.type = "button";
+  cancelReselect.dataset.cancelReselect = "";
+  cancelReselect.textContent = "取消重新选择";
+  cancelReselect.hidden = true;
+  cancelReselect.addEventListener("click", cancelReselection);
+  actions.append(cancelReselect);
   form.append(actions);
   panel.append(form);
 
