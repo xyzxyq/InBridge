@@ -7,6 +7,8 @@
   <p>
     <a href="README.md">中文</a>
     ·
+    <a href="https://mcp.example.com/">Website</a>
+    ·
     <a href="https://mcp.example.com/health">Production status</a>
     ·
     <a href="docs/TEMPLATES.md">Templates</a>
@@ -28,6 +30,8 @@
 ## Overview
 
 InBridge is an MCP App for ChatGPT. When the model needs a user to choose a plan, approve an action, or configure parameters, InBridge renders a structured inline panel instead of relying on an ambiguous free-form reply.
+
+![InBridge landing page](docs/assets/landing-page.jpg)
 
 After confirmation, the Widget writes a versioned structured result into model context and triggers the next turn automatically. The model can then read the exact selection and continue the original task.
 
@@ -120,6 +124,7 @@ The Widget follows ChatGPT's active light or dark appearance through MCP Apps `h
 
 | Endpoint | Method | Purpose |
 | --- | --- | --- |
+| `https://mcp.example.com/` | `GET` | Product website and local interaction demo |
 | `https://mcp.example.com/mcp` | `POST` | Stateless Streaming HTTP MCP endpoint |
 | `https://mcp.example.com/health` | `GET` | Service health and version |
 | `https://mcp.example.com/icon.png` | `GET` | Project and MCP service icon |

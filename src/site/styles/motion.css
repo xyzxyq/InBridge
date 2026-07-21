@@ -1,0 +1,15 @@
+@keyframes breathe-a { from { transform: translate3d(0, 0, 0) scale(0.98); } to { transform: translate3d(14px, 12px, 0) scale(1.03); } }
+@keyframes breathe-b { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(-12px, 16px, 0) scale(1.04); } }
+@keyframes nav-enter { from { opacity: 0; transform: translate(-50%, -8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes demo-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.reveal { opacity: 0; transform: translateY(18px); transition: opacity 560ms var(--ease-out-soft), transform 560ms var(--ease-out-soft); }
+.reveal.is-visible { opacity: 1; transform: none; }
+.bento-grid .reveal:nth-child(2), .process-steps .reveal:nth-child(2) { transition-delay: 70ms; }
+.bento-grid .reveal:nth-child(3), .process-steps .reveal:nth-child(3) { transition-delay: 140ms; }
+.bento-grid .reveal:nth-child(4) { transition-delay: 210ms; }
+.bento-grid .reveal:nth-child(5) { transition-delay: 280ms; }
+.bento-grid .reveal:nth-child(6) { transition-delay: 350ms; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  .reveal { opacity: 1; transform: none; }
+}

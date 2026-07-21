@@ -1,0 +1,24 @@
+import "./styles/tokens.css";
+import "./styles/base.css";
+import "./styles/glass.css";
+import "./styles/layout.css";
+import "./styles/components.css";
+import "./styles/motion.css";
+import { initArchitecture } from "./components/architecture-flow";
+import { initEndpointCopy } from "./components/endpoint-copy";
+import { initGlassHighlights } from "./components/glass";
+import { initHeroParallax } from "./components/hero-parallax";
+import { initInteractiveDemo } from "./components/interactive-demo";
+import { initNavigation } from "./components/navigation";
+import { initReveal, prefersReducedMotion } from "./components/reveal";
+import { renderUseCases } from "./components/use-case-grid";
+
+renderUseCases();
+const reducedMotion = prefersReducedMotion();
+initNavigation();
+initInteractiveDemo();
+initEndpointCopy();
+initHeroParallax(reducedMotion);
+initGlassHighlights(reducedMotion);
+initArchitecture(reducedMotion);
+initReveal(reducedMotion);

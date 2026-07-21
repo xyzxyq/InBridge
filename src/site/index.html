@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f7f6f4" />
+    <meta name="description" content="InBridge is an open-source MCP App that brings structured choices, configuration panels, confirmations, wizards and real-time previews directly into ChatGPT conversations." />
+    <meta property="og:title" content="InBridge — Interactive UI Bridge for ChatGPT" />
+    <meta property="og:description" content="让选择、配置与确认直接发生在 ChatGPT 对话里。" />
+    <meta property="og:image" content="https://mcp.example.com/assets/og-cover.png" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://mcp.example.com/" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="InBridge — Interactive UI Bridge for ChatGPT" />
+    <meta name="twitter:description" content="让选择、配置与确认直接发生在 ChatGPT 对话里。" />
+    <meta name="twitter:image" content="https://mcp.example.com/assets/og-cover.png" />
+    <link rel="icon" type="image/png" href="/assets/favicon.png" />
+    <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
+    <title>InBridge — Interactive UI Bridge for ChatGPT</title>
+    <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"InBridge","applicationCategory":"DeveloperApplication","operatingSystem":"Web","isAccessibleForFree":true,"codeRepository":"https://github.com/xyzxyq/InBridge","url":"https://mcp.example.com/"}</script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">跳至主要内容</a>
+    <div class="ambient ambient-blush" aria-hidden="true"></div>
+    <div class="ambient ambient-lavender" aria-hidden="true"></div>
+    <div class="ambient ambient-sky" aria-hidden="true"></div>
+
+    <nav class="floating-nav glass-panel" aria-label="主导航" data-navigation>
+      <a class="brand" href="#top" aria-label="InBridge 首页">
+        <img src="/assets/inbridge-icon-128.webp" alt="" width="36" height="38" />
+        <span>InBridge</span>
+      </a>
+      <div class="nav-links">
+        <a href="#demo">体验</a><a href="#use-cases">场景</a><a href="#how-it-works">原理</a><a href="#quick-start">开始使用</a>
+      </div>
+      <a class="nav-github" href="https://github.com/xyzxyq/InBridge" target="_blank" rel="noopener noreferrer">GitHub <span aria-hidden="true">↗</span></a>
+    </nav>
+
+    <main id="main">
+      <section class="hero section-shell" id="top" aria-labelledby="hero-title">
+        <div class="hero-copy reveal">
+          <p class="eyebrow"><span></span> OPEN-SOURCE MCP APP</p>
+          <h1 id="hero-title">让对话，<br />不再止于文本。</h1>
+          <p class="hero-lead">InBridge 把选择、配置、确认与实时预览直接带入 ChatGPT 对话。模型提出交互，用户完成操作，结构化结果自动回到模型。</p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="#quick-start">立即体验 InBridge</a>
+            <a class="button button-secondary" href="https://github.com/xyzxyq/InBridge" target="_blank" rel="noopener noreferrer">在 GitHub 查看源码 <span aria-hidden="true">↗</span></a>
+          </div>
+          <div class="service-status"><span aria-hidden="true"></span> 生产实例在线 · 无状态 · 开源</div>
+        </div>
+        <div class="hero-visual reveal" data-hero-parallax>
+          <div class="icon-base glass-panel" data-glass>
+            <picture>
+              <source srcset="/assets/inbridge-icon-512.webp" type="image/webp" />
+              <img src="/assets/inbridge-icon-1024.png" alt="InBridge 应用图标，桥梁与对话气泡融合的珍珠色标志" width="512" height="543" fetchpriority="high" />
+            </picture>
+          </div>
+          <p>Interactive UI Bridge<br /><span>for ChatGPT and MCP Apps</span></p>
+        </div>
+      </section>
+
+      <section class="section-shell demo-section" id="demo" aria-labelledby="demo-title">
+        <div class="section-heading reveal"><p class="eyebrow">INTERACTIVE DEMO</p><h2 id="demo-title">在对话里，直接完成选择。</h2><p>不连接 MCP，也可以亲手体验 InBridge 的核心交互。以下操作仅在本地演示，不会发送或保存数据。</p></div>
+        <div class="demo-window glass-panel reveal" data-glass>
+          <div class="window-bar"><div class="window-dots" aria-hidden="true"><span></span><span></span><span></span></div><span>InBridge · 交互演示</span><span class="local-badge">LOCAL ONLY</span></div>
+          <div data-interactive-demo></div>
+        </div>
+      </section>
+
+      <section class="section-shell why-section" id="why" aria-labelledby="why-title">
+        <div class="section-heading reveal"><p class="eyebrow">WHY INBRIDGE</p><h2 id="why-title">模型越来越聪明，<br />人机交互却仍停留在输入框里。</h2><p>当 ChatGPT 需要用户选择方案、配置实验、确认视觉风格或批准下一步操作时，传统做法仍然要求用户回复字母或手动描述参数。这不仅低效，也容易产生歧义。</p><p>InBridge 让模型安全地请求人类输入，让人类用更自然、更清晰的方式完成决定。</p></div>
+        <div class="before-after reveal">
+          <article class="before-card"><span class="card-kicker">BEFORE · 纯文本</span><div class="message-lines"><p>请选择：</p><p>A. 快速方案</p><p>B. 稳健方案</p><p>C. 创新方案</p></div><div class="plain-reply">用户回复：B</div></article>
+          <div class="bridge-mark" aria-hidden="true"><span></span><b>InBridge</b><span></span></div>
+          <article class="after-card glass-panel" data-glass><span class="card-kicker">AFTER · 结构化交互</span><div class="mini-options"><button type="button">快速方案</button><button type="button" class="selected"><span>✓</span> 稳健方案 <em>推荐</em></button><button type="button">创新方案</button></div><div class="mini-result">已选择：稳健方案</div></article>
+        </div>
+      </section>
+
+      <section class="section-shell use-cases-section" id="use-cases" aria-labelledby="use-cases-title">
+        <div class="section-heading reveal"><p class="eyebrow">USE CASES</p><h2 id="use-cases-title">一套交互层，<br />适配不同工作流。</h2></div>
+        <div class="bento-grid" data-use-cases></div>
+      </section>
+
+      <section class="section-shell works-section" id="how-it-works" aria-labelledby="works-title">
+        <div class="section-heading reveal"><p class="eyebrow">HOW IT WORKS</p><h2 id="works-title">交互发生在界面，<br />结果回到模型。</h2></div>
+        <ol class="architecture-flow reveal" data-architecture aria-label="InBridge 工作流程">
+          <li><span>01</span><b>ChatGPT</b><small>Model</small></li><li><span>02</span><b>MCP Tool</b><small>Request</small></li><li><span>03</span><b>Schema</b><small>Validate</small></li><li><span>04</span><b>Widget</b><small>Render</small></li><li><span>05</span><b>User</b><small>Confirm</small></li><li><span>06</span><b>Context</b><small>Continue</small></li>
+        </ol>
+        <div class="process-steps">
+          <article class="reveal"><span>1</span><p class="eyebrow">MODEL REQUESTS INTERACTION</p><h3>模型提出交互</h3><p>ChatGPT 调用 InBridge Tool，并提交严格的声明式配置。</p></article>
+          <article class="reveal"><span>2</span><p class="eyebrow">USER ACTS IN THE PANEL</p><h3>用户在面板中操作</h3><p>控件、向导与实时预览直接出现在当前对话中。</p></article>
+          <article class="reveal"><span>3</span><p class="eyebrow">MODEL CONTINUES</p><h3>模型读取结果继续</h3><p>结构化结果写回上下文，并自动触发下一轮对话。</p></article>
+        </div>
+        <div class="feature-list reveal">
+          <article><span class="feature-number">01</span><div><h3>声明式安全 UI</h3><p>模型只能传递严格 Schema，不能注入 HTML、CSS 或 JavaScript。</p></div><b>Strict schema</b></article>
+          <article><span class="feature-number">02</span><div><h3>模板与通用渲染并存</h3><p>常见场景使用稳定模板，特殊场景使用通用控件定义。</p></div><b>5 templates</b></article>
+          <article><span class="feature-number">03</span><div><h3>双通道结果回传</h3><p>结构化上下文负责准确，后续消息负责让模型自然继续。</p></div><b>Reliable delivery</b></article>
+          <article><span class="feature-number">04</span><div><h3>无状态、易部署</h3><p>不保存用户对话与表单状态，适合 Vercel 和自托管。</p></div><b>Serverless ready</b></article>
+        </div>
+      </section>
+
+      <section class="section-shell quick-start" id="quick-start" aria-labelledby="quick-title">
+        <div class="quick-panel glass-panel reveal" data-glass>
+          <div class="quick-copy"><p class="eyebrow">QUICK START</p><h2 id="quick-title">五分钟，把 InBridge<br />接入 ChatGPT。</h2><p>公共实例适合体验与轻量使用。长期稳定使用推荐从 GitHub 部署自己的实例。</p><div class="quick-links"><a href="https://github.com/xyzxyq/InBridge#接入-chatgpt" target="_blank" rel="noopener noreferrer">查看部署文档 ↗</a><a href="https://github.com/xyzxyq/InBridge" target="_blank" rel="noopener noreferrer">Star on GitHub ↗</a></div></div>
+          <div class="setup-card">
+            <ol><li><span>1</span><div><b>打开 Developer Mode</b><small>在 ChatGPT 设置中启用开发者模式。</small></div></li><li><span>2</span><div><b>创建 Developer App</b><small>添加一个新的自定义 MCP App。</small></div></li><li><span>3</span><div><b>填写 MCP Endpoint</b><small>复制下方生产地址并保存。</small></div></li><li><span>4</span><div><b>启用 InBridge</b><small>在新对话中启用并开始使用。</small></div></li></ol>
+            <div class="endpoint-box"><code data-endpoint>https://mcp.example.com/mcp</code><button type="button" data-copy-endpoint>复制</button></div><p class="copy-status" data-copy-status aria-live="polite"></p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="section-shell footer-shell">
+      <div class="footer-panel glass-panel">
+        <div><a class="brand footer-brand" href="#top"><img src="/assets/inbridge-icon-128.webp" alt="" width="44" height="47" /><span>InBridge</span></a><p>Interactive UI Bridge for ChatGPT.</p></div>
+        <div class="developer"><span>Designed &amp; built by</span><a href="https://github.com/xyzxyq" target="_blank" rel="noopener noreferrer">xyzxyq ↗</a></div>
+        <div class="footer-bottom"><span>© 2026 InBridge. Open source.</span><span>Built from a simple belief: better AI needs better human interaction.</span></div>
+      </div>
+    </footer>
+    <script type="module" src="/main.ts"></script>
+  </body>
+</html>

@@ -44,6 +44,19 @@ try {
   assert.equal(iconResponse.status, 200);
   assert.match(iconResponse.headers.get("content-type") ?? "", /^image\/png/);
 
+  const landingResponse = await fetch(`${baseUrl}/`);
+  const landingHtml = await landingResponse.text();
+  assert.equal(landingResponse.status, 200);
+  assert.match(landingResponse.headers.get("content-type") ?? "", /^text\/html/);
+  assert.match(landingResponse.headers.get("content-security-policy") ?? "", /frame-ancestors 'none'/);
+  assert(landingHtml.includes("InBridge — Interactive UI Bridge for ChatGPT"));
+  assert(landingHtml.includes("data-interactive-demo"));
+
+  const heroResponse = await fetch(`${baseUrl}/assets/inbridge-icon-512.webp`);
+  assert.equal(heroResponse.status, 200);
+  assert.match(heroResponse.headers.get("content-type") ?? "", /^image\/webp/);
+  assert.match(heroResponse.headers.get("cache-control") ?? "", /immutable/);
+
   const transport = new StreamableHTTPClientTransport(new URL(`${baseUrl}/mcp`));
   await client.connect(transport);
 
@@ -181,7 +194,7 @@ try {
   );
 
   console.log(
-    "Smoke test passed: health, icon metadata, template discovery, template rendering, custom rendering, and resources/read are operational."
+    "Smoke test passed: landing page, assets, health, icon metadata, template discovery, rendering, and resources/read are operational."
   );
 } finally {
   await client.close().catch(() => undefined);

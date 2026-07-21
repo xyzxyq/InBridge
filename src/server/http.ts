@@ -23,9 +23,11 @@ export const observeAndSecureRequests: RequestHandler = (request, response, next
   const startedAt = performance.now();
   const id = headerValue(request, "x-request-id") ?? headerValue(request, "x-vercel-id") ?? randomUUID();
   const path =
-    request.path === "/mcp" || request.path === "/health" || request.path === "/icon.png"
+    request.path === "/mcp" || request.path === "/health" || request.path === "/icon.png" || request.path === "/"
       ? request.path
-      : "/other";
+      : request.path.startsWith("/assets/")
+        ? "/assets/*"
+        : "/other";
 
   response.locals.requestId = id;
   response.set({

@@ -4,7 +4,7 @@
   "buildCommand": "npm run verify && npm run build",
   "functions": {
     "server.ts": {
-      "includeFiles": "{dist/ui/**,icon/icon.png}",
+      "includeFiles": "{dist/ui/**,dist/site/**,icon/icon.png}",
       "maxDuration": 60
     }
   }

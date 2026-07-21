@@ -4,7 +4,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { observeAndSecureRequests, requestId, safeHttpErrorHandler } from "./http.js";
 import { createMcpServer } from "./mcp.js";
 
-export function configureHttpApp(app: Express) {
+export function configureHttpApp(app: Express, siteRoot = path.join(process.cwd(), "dist/site")) {
   app.disable("x-powered-by");
   app.use(observeAndSecureRequests);
   app.use(express.json({ limit: "64kb" }));
@@ -18,6 +18,38 @@ export function configureHttpApp(app: Express) {
       .type("png")
       .set("Cache-Control", "public, max-age=86400, immutable")
       .sendFile(path.join(process.cwd(), "icon/icon.png"), (error) => {
+        if (error) next(error);
+      });
+  });
+
+  app.use(
+    "/assets",
+    express.static(path.join(siteRoot, "assets"), {
+      immutable: true,
+      maxAge: "1y",
+      setHeaders(response) {
+        response.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      }
+    })
+  );
+
+  app.get("/", (_request, response, next) => {
+    response
+      .set({
+        "Cache-Control": "public, max-age=0, must-revalidate",
+        "Content-Security-Policy": [
+          "default-src 'self'",
+          "script-src 'self' 'sha256-94d4hPLqMtZEGXwdX0vhLqdHIxxyLTJ5VW73gFbuIOY='",
+          "style-src 'self'",
+          "img-src 'self' data:",
+          "font-src 'self'",
+          "connect-src 'self'",
+          "frame-ancestors 'none'",
+          "base-uri 'self'",
+          "form-action 'self'"
+        ].join("; ")
+      })
+      .sendFile(path.join(siteRoot, "index.html"), (error) => {
         if (error) next(error);
       });
   });
@@ -68,6 +100,6 @@ export function configureHttpApp(app: Express) {
   return app;
 }
 
-export function createHttpApp() {
-  return configureHttpApp(express());
+export function createHttpApp(siteRoot?: string) {
+  return configureHttpApp(express(), siteRoot);
 }

@@ -1,0 +1,25 @@
+:root {
+  --canvas: #f7f6f4;
+  --canvas-elevated: #fbfaf9;
+  --ink: #202532;
+  --ink-soft: #4f5664;
+  --muted: #626a77;
+  --line: rgb(70 78 96 / 12%);
+  --pearl: #fffdfa;
+  --blush: #f6dfe5;
+  --lavender: #ddd8f5;
+  --sky: #d4e4f8;
+  --ice: #ecf5fb;
+  --accent: #6f74cf;
+  --accent-soft: rgb(111 116 207 / 14%);
+  --glass-bg: rgb(255 255 255 / 56%);
+  --glass-bg-strong: rgb(255 255 255 / 76%);
+  --glass-border: rgb(255 255 255 / 78%);
+  --glass-shadow: 0 24px 70px rgb(72 76 105 / 12%);
+  --glass-inner: inset 0 1px 0 rgb(255 255 255 / 92%), inset 0 -1px 0 rgb(102 112 142 / 8%);
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring-soft: cubic-bezier(0.16, 1, 0.3, 1);
+  --content: min(1200px, calc(100vw - 48px));
+  color-scheme: light;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+}

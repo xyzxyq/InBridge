@@ -1,4 +1,5 @@
 import type { Server } from "node:http";
+import path from "node:path";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import { createHttpApp } from "../src/server/app.js";
 
@@ -6,7 +7,7 @@ let server: Server;
 let baseUrl: string;
 
 beforeAll(async () => {
-  server = createHttpApp().listen(0, "127.0.0.1");
+  server = createHttpApp(path.join(process.cwd(), "src/site")).listen(0, "127.0.0.1");
   await new Promise<void>((resolve, reject) => {
     server.once("listening", resolve);
     server.once("error", reject);
@@ -66,6 +67,19 @@ describe("HTTP production boundary", () => {
     expect(response.headers.get("content-type")).toContain("image/png");
     expect(response.headers.get("cache-control")).toBe("public, max-age=86400, immutable");
     expect(Array.from(body.slice(0, 8))).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
+  });
+
+  test("serves the landing page with revalidation caching and a restrictive CSP", async () => {
+    const response = await fetch(`${baseUrl}/`);
+    const html = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("text/html");
+    expect(response.headers.get("cache-control")).toBe("public, max-age=0, must-revalidate");
+    expect(response.headers.get("content-security-policy")).toContain("frame-ancestors 'none'");
+    expect(response.headers.get("content-security-policy")).not.toContain("'unsafe-inline'");
+    expect(html).toContain("让对话，");
+    expect(html).toContain("data-interactive-demo");
   });
 
   test("returns a safe JSON response for malformed JSON", async () => {
