@@ -36,10 +36,12 @@ async function waitForHealth(): Promise<void> {
   throw new Error(`Server did not become healthy. ${stderr}`);
 }
 
-const client = new Client({ name: "inbridge-smoke-test", version: "0.10.0" });
+const client = new Client({ name: "inbridge-smoke-test", version: "0.13.0" });
 
 try {
   await waitForHealth();
+  const healthResponse = await fetch(`${baseUrl}/health`);
+  assert.deepEqual(await healthResponse.json(), { status: "ok", service: "inbridge", version: "0.13.0" });
   const iconResponse = await fetch(`${baseUrl}/icon.png`);
   assert.equal(iconResponse.status, 200);
   assert.match(iconResponse.headers.get("content-type") ?? "", /^image\/png/);
@@ -63,11 +65,19 @@ try {
   assert.deepEqual(client.getServerVersion()?.icons, [
     { src: APP_ICON_URL, mimeType: "image/png", sizes: ["981x1040"] }
   ]);
+  assert.equal(client.getServerVersion()?.version, "0.13.0");
+  assert.match(client.getInstructions() ?? "", /Use InBridge proactively/);
+  assert.match(client.getInstructions() ?? "", /do not call list_interaction_templates first/);
 
   const tools = await client.listTools();
-  assert(tools.tools.some((tool) => tool.name === "render_interaction"));
-  assert(tools.tools.some((tool) => tool.name === "list_interaction_templates"));
-  assert(tools.tools.some((tool) => tool.name === "render_interaction_template"));
+  const primaryCustomTool = tools.tools.find((tool) => tool.name === "ask_user_interactively");
+  assert.match(primaryCustomTool?.description ?? "", /Proactively ask the user/);
+  const legacyRenderTool = tools.tools.find((tool) => tool.name === "render_interaction");
+  assert.deepEqual(legacyRenderTool?._meta?.ui?.visibility, ["app"]);
+  const catalogTool = tools.tools.find((tool) => tool.name === "list_interaction_templates");
+  assert.match(catalogTool?.description ?? "", /Rare fallback only/);
+  const templateTool = tools.tools.find((tool) => tool.name === "render_interaction_template");
+  assert.match(templateTool?.description ?? "", /without list_interaction_templates/);
 
   const catalogResult = await client.callTool({
     name: "list_interaction_templates",
@@ -127,7 +137,7 @@ try {
   });
 
   const result = await client.callTool({
-    name: "render_interaction",
+    name: "ask_user_interactively",
     arguments: {
       interactionId: "smoke_choice",
       title: "选择一个方案",
@@ -194,7 +204,7 @@ try {
   );
 
   console.log(
-    "Smoke test passed: landing page, assets, health, icon metadata, template discovery, rendering, and resources/read are operational."
+    "Smoke test passed: landing page, assets, v0.13 MCP guidance, proactive tool metadata, rendering, and resources/read are operational."
   );
 } finally {
   await client.close().catch(() => undefined);

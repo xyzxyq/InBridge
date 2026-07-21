@@ -28,6 +28,12 @@ const RENDER_TOOL_META = {
   "openai/toolInvocation/invoked": "交互选项已准备好"
 };
 
+const LEGACY_RENDER_TOOL_META = {
+  ...RENDER_TOOL_META,
+  ui: { resourceUri: WIDGET_URI, visibility: ["app"] as Array<"app"> },
+  "openai/visibility": "private"
+};
+
 const RENDER_TOOL_ANNOTATIONS = {
   readOnlyHint: true,
   destructiveHint: false,
@@ -67,10 +73,10 @@ async function loadWidgetHtml(): Promise<string> {
 
 export function createMcpServer(): McpServer {
   const server = new McpServer(
-    { name: "inbridge", version: "0.12.0", icons: APP_ICONS },
+    { name: "inbridge", version: "0.13.0", icons: APP_ICONS },
     {
       instructions:
-        "Prefer render_interaction_template when decision, confirmation, experiment_config, or theme_config matches the task. Use list_interaction_templates when unsure. Use render_interaction only for novel forms that need custom controls. Preserve mathematical notation as LaTeX, preferably with $...$ for inline formulas and $$...$$ for display formulas. After rendering, wait for the user to confirm or cancel in the inline panel."
+        "Use InBridge proactively whenever the user needs to choose among options, compare plans, configure multiple parameters, set preferences, approve or reject an action, or provide other structured input. Prefer an interactive panel over a long plain-text option list when it reduces ambiguity or effort. For decision, confirmation, experiment_config, theme_config, or comparison, call render_interaction_template directly—do not call list_interaction_templates first. For novel forms, call ask_user_interactively. After rendering, stop and wait for the user to confirm or cancel before continuing. Use list_interaction_templates only as a rare fallback when no template can be inferred. Preserve mathematical notation as LaTeX, preferably with $...$ inline and $$...$$ for display."
     }
   );
 
@@ -101,11 +107,12 @@ export function createMcpServer(): McpServer {
   server.registerTool(
     "list_interaction_templates",
     {
-      title: "List InBridge interaction templates",
+      title: "Rare fallback: inspect InBridge templates",
       description:
-        "List the stable interaction templates available in InBridge and when to use them. Call this when a structured interaction is useful but the best template is unclear.",
+        "Rare fallback only: inspect the InBridge template catalog when no suitable template can be inferred from the task. Do not call this before ordinary decisions, confirmations, experiment configuration, theme configuration, or plan comparisons; call render_interaction_template directly for those intents.",
       inputSchema: z.object({}).strict(),
-      outputSchema: templateCatalogOutputSchema
+      outputSchema: templateCatalogOutputSchema,
+      annotations: RENDER_TOOL_ANNOTATIONS
     },
     async () => ({
       structuredContent: { templates: TEMPLATE_CATALOG },
@@ -122,9 +129,9 @@ export function createMcpServer(): McpServer {
     server,
     "render_interaction_template",
     {
-      title: "Render an InBridge interaction template",
+      title: "Ask the user with a ready-made interactive panel",
       description:
-        "Render a validated, consistent inline interaction from a named template. Prefer this over render_interaction for common decisions, confirmations, experiment configuration, and theme configuration.",
+        "Proactively ask the user through a validated inline UI instead of listing options in plain text. Call this directly, without list_interaction_templates, for these intents: decision (single or multiple choice), confirmation (approve/reject/cancel), experiment_config (multi-step experiment settings), theme_config (visual settings with live preview), or comparison (rich side-by-side plans). After calling, stop and wait for the user to confirm or cancel in the panel.",
       inputSchema: interactionTemplateToolInputSchema.shape,
       outputSchema: normalizedInteractionSchema,
       annotations: RENDER_TOOL_ANNOTATIONS,
@@ -147,15 +154,41 @@ export function createMcpServer(): McpServer {
 
   registerAppTool(
     server,
-    "render_interaction",
+    "ask_user_interactively",
     {
-      title: "Render an interactive choice",
+      title: "Ask the user interactively",
       description:
-        "Render an inline decision panel when the user needs to choose or confirm one or more options. Use this instead of asking for a plain-text response when structured interaction is materially clearer.",
+        "Proactively ask the user for structured input in an inline interactive panel when no built-in template fits. Use when the user must choose or compare options, configure several fields, set preferences, review a live preview, or explicitly confirm an action. Supports radio, checkbox, select, range, text, number, switch, color, comparison cards, conditional fields, and multi-step flows. Prefer this over a long or ambiguous plain-text question; after calling, stop and wait for confirmation or cancellation.",
       inputSchema: interactionConfigSchema,
       outputSchema: normalizedInteractionSchema,
       annotations: RENDER_TOOL_ANNOTATIONS,
       _meta: RENDER_TOOL_META
+    },
+    async (input) => {
+      const normalized = normalizeInteraction(input);
+      return {
+        structuredContent: normalized,
+        content: [
+          {
+            type: "text",
+            text: `Displayed interaction ${normalized.interactionId}. Wait for the user to confirm or cancel in the inline panel.`
+          }
+        ]
+      };
+    }
+  );
+
+  registerAppTool(
+    server,
+    "render_interaction",
+    {
+      title: "Legacy custom interaction renderer",
+      description:
+        "Deprecated compatibility alias for ask_user_interactively. New model-initiated interactions must use ask_user_interactively.",
+      inputSchema: interactionConfigSchema,
+      outputSchema: normalizedInteractionSchema,
+      annotations: RENDER_TOOL_ANNOTATIONS,
+      _meta: LEGACY_RENDER_TOOL_META
     },
     async (input) => {
       const normalized = normalizeInteraction(input);

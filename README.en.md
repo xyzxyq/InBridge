@@ -18,10 +18,11 @@
 
   <p>
     <a href="https://github.com/xyzxyq/InBridge/actions/workflows/ci.yml"><img src="https://github.com/xyzxyq/InBridge/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
-    <img src="https://img.shields.io/badge/version-0.12.0-8b5cf6" alt="Version 0.12.0" />
+    <img src="https://img.shields.io/badge/version-0.13.0-8b5cf6" alt="Version 0.13.0" />
     <img src="https://img.shields.io/badge/Node.js-22.x-339933?logo=nodedotjs&logoColor=white" alt="Node.js 22.x" />
     <img src="https://img.shields.io/badge/MCP%20Apps-1.7.4-2563eb" alt="MCP Apps 1.7.4" />
     <img src="https://img.shields.io/badge/TypeScript-5.9-3178c6?logo=typescript&logoColor=white" alt="TypeScript 5.9" />
+    <img src="https://img.shields.io/badge/license-Apache--2.0-6f74cf" alt="Apache License 2.0" />
   </p>
 </div>
 
@@ -31,7 +32,7 @@
 
 InBridge is an MCP App for ChatGPT. When the model needs a user to choose a plan, approve an action, or configure parameters, InBridge renders a structured inline panel instead of relying on an ambiguous free-form reply.
 
-![InBridge landing page](docs/assets/landing-page.jpg)
+![InBridge — Interactive UI Bridge for ChatGPT](src/site/public/assets/og-cover.png)
 
 After confirmation, the Widget writes a versioned structured result into model context and triggers the next turn automatically. The model can then read the exact selection and continue the original task.
 
@@ -133,11 +134,11 @@ The Widget follows ChatGPT's active light or dark appearance through MCP Apps `h
 
 | Tool | Purpose |
 | --- | --- |
-| `list_interaction_templates` | Lists stable templates and their intended use |
-| `render_interaction_template` | Builds a consistent validated interaction from a template |
-| `render_interaction` | Builds a custom declarative interaction when no template fits |
+| `render_interaction_template` | Primary entry for common decisions, confirmations, configurations, and comparisons |
+| `ask_user_interactively` | Builds a custom declarative interaction when no template fits |
+| `list_interaction_templates` | Rare catalog fallback only when the task does not reveal a suitable template |
 
-Prefer templates for common decisions, confirmations, and configuration workflows. Use `render_interaction` only when a task genuinely needs a custom combination of fields.
+Routine calls should not enumerate templates first: call `render_interaction_template` directly for known intents and use `ask_user_interactively` only for genuinely custom field combinations. The old `render_interaction` entry remains as an app-only compatibility alias and is no longer recommended to the model.
 
 ### Built-in templates
 
@@ -253,7 +254,17 @@ npm run dev
 3. Set the MCP server URL to `https://mcp.example.com/mcp`.
 4. Save, refresh, or reconnect the app.
 5. Enable InBridge in a new conversation.
-6. Ask the model to use it explicitly, for example:
+6. Add the instruction below to **Custom instructions** in ChatGPT **Personalization** settings so ChatGPT can decide when to invoke InBridge proactively.
+
+### Recommended personalization instruction
+
+Copy and paste:
+
+```text
+When a task requires me to choose among plans, compare candidates, configure several parameters, set preferences, approve or reject an action, or provide other structured input, proactively use the connected InBridge app instead of presenting a long plain-text list of options. For ordinary decisions, confirmations, experiment configuration, theme configuration, or plan comparisons, call render_interaction_template directly with decision, confirmation, experiment_config, theme_config, or comparison; do not call list_interaction_templates first. Use ask_user_interactively only when no built-in template can cover the required controls. After calling the tool, wait for me to confirm or cancel in the panel before continuing the original task. Do not use InBridge for simple factual questions or a single short question that does not benefit from structured input.
+```
+
+After saving it, verify the connection with:
 
 ```text
 Use InBridge's comparison template to show three implementation plans.
@@ -341,7 +352,7 @@ The local smoke test starts the compiled server and performs real checks for:
 - MCP initialize;
 - `tools/list`;
 - template discovery and rendering;
-- custom `render_interaction`;
+- custom `ask_user_interactively` and legacy-entry compatibility metadata;
 - `resources/read` and inline Widget content.
 
 Run the same suite against production:
@@ -465,4 +476,4 @@ npm run smoke
 
 ## License
 
-This repository does not currently include an open-source license. Until an explicit license file is added, all rights are reserved; do not assume the code may be redistributed under MIT, Apache-2.0, or another open-source license.
+InBridge is open source under the [Apache License 2.0](LICENSE). You may use, modify, and distribute the project in accordance with the license while preserving the required copyright and license notices.

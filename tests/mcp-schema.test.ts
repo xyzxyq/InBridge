@@ -29,9 +29,19 @@ describe("MCP tool descriptors", () => {
 
     expect(client.getServerVersion()).toMatchObject({
       name: "inbridge",
-      version: "0.12.0",
+      version: "0.13.0",
       icons: [{ src: APP_ICON_URL, mimeType: "image/png", sizes: ["981x1040"] }]
     });
+  });
+
+  it("front-loads proactive interaction guidance and avoids routine catalog calls", async () => {
+    const client = await connectedClient();
+    const instructions = client.getInstructions();
+
+    expect(instructions?.slice(0, 512)).toContain("Use InBridge proactively");
+    expect(instructions?.slice(0, 512)).toContain("do not call list_interaction_templates first");
+    expect(instructions).toContain("ask_user_interactively");
+    expect(instructions).toContain("rare fallback");
   });
 
   it("publishes the required template selector fields through tools/list", async () => {
@@ -54,7 +64,7 @@ describe("MCP tool descriptors", () => {
     const client = await connectedClient();
     const result = await client.listTools();
 
-    for (const name of ["render_interaction_template", "render_interaction"]) {
+    for (const name of ["render_interaction_template", "ask_user_interactively"]) {
       const tool = result.tools.find((candidate) => candidate.name === name);
       expect(tool).toMatchObject({
         annotations: {
@@ -73,6 +83,30 @@ describe("MCP tool descriptors", () => {
         }
       });
     }
+
+    const legacy = result.tools.find((candidate) => candidate.name === "render_interaction");
+    expect(legacy).toMatchObject({
+      description: expect.stringContaining("Deprecated compatibility alias"),
+      _meta: {
+        ui: { visibility: ["app"] },
+        "openai/visibility": "private"
+      }
+    });
+  });
+
+  it("uses intent-rich descriptions and marks template listing as a rare fallback", async () => {
+    const client = await connectedClient();
+    const result = await client.listTools();
+    const customTool = result.tools.find((candidate) => candidate.name === "ask_user_interactively");
+    const templateTool = result.tools.find((candidate) => candidate.name === "render_interaction_template");
+    const listTool = result.tools.find((candidate) => candidate.name === "list_interaction_templates");
+
+    expect(customTool?.description).toContain("Proactively ask the user");
+    expect(customTool?.description).toContain("plain-text question");
+    expect(templateTool?.description).toContain("without list_interaction_templates");
+    expect(templateTool?.description).toContain("comparison");
+    expect(listTool?.title).toContain("Rare fallback");
+    expect(listTool?.description).toContain("Do not call this before ordinary decisions");
   });
 
   it("describes the public widget and its conversation-preserving intent", async () => {
@@ -128,7 +162,7 @@ describe("MCP tool descriptors", () => {
   it("publishes conditional-control fields through tools/list", async () => {
     const client = await connectedClient();
     const result = await client.listTools();
-    const customTool = result.tools.find((candidate) => candidate.name === "render_interaction");
+    const customTool = result.tools.find((candidate) => candidate.name === "ask_user_interactively");
     const templateTool = result.tools.find((candidate) => candidate.name === "render_interaction_template");
 
     expect(JSON.stringify(customTool?.inputSchema)).toContain('"visibleWhen"');

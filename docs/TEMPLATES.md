@@ -1,6 +1,6 @@
 # InBridge 交互模板
 
-模板通过 `render_interaction_template` 工具调用。模型不确定模板时，可以先调用 `list_interaction_templates`；只有没有匹配模板的定制表单才使用底层 `render_interaction`。
+模板通过 `render_interaction_template` 工具直接调用。常见决策、确认、实验配置、主题配置和方案比较不应先调用 `list_interaction_templates`；只有无法从任务判断模板时才把目录工具作为低频兜底。没有匹配模板的定制表单使用 `ask_user_interactively`。
 
 ## decision
 
@@ -61,7 +61,7 @@
 
 ## 条件控件
 
-底层 `render_interaction` 允许控件通过 `visibleWhen` 引用一个前置控件：
+`ask_user_interactively` 允许控件通过 `visibleWhen` 引用一个前置控件：
 
 ```json
 {
@@ -125,4 +125,4 @@
 
 每组允许 2–6 张卡片。`badge` 只作说明，不会自动替用户选择；如提供 `defaultValue`，它必须匹配某张卡片的 `value`。
 
-所有模板最终都会转换为与 `render_interaction` 相同的严格白名单结构，并复用同一套确认、取消、重试和结果回传协议。
+所有模板最终都会转换为与 `ask_user_interactively` 相同的严格白名单结构，并复用同一套确认、取消、重试和结果回传协议。旧名称 `render_interaction` 仅作为应用侧兼容别名保留。

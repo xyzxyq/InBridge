@@ -1,7 +1,8 @@
 {
   "name": "inbridge",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "private": true,
+  "license": "Apache-2.0",
   "type": "module",
   "description": "A personal-first MCP App for structured choices inside ChatGPT.",
   "scripts": {

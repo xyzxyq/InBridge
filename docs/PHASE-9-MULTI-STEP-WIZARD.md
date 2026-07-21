@@ -45,10 +45,10 @@
 ## ChatGPT 验收提示词
 
 ```text
-请先调用 InBridge 的 list_interaction_templates，然后只调用
-render_interaction_template，使用 experiment_config 模板生成实验配置向导。
+请直接调用 InBridge 的 render_interaction_template，使用 experiment_config
+模板生成实验配置向导，不要先调用 list_interaction_templates。
 默认研究方向为 MARL、环境为 CartPole、训练预算 80、随机种子 8，
-开启消融实验。调用后等待我完成全部步骤，不要改用 render_interaction。
+开启消融实验。调用后等待我完成全部步骤，不要改用 ask_user_interactively。
 ```
 
 验收时应确认：出现三个步骤；返回上一步不丢值；关闭消融后相关变量隐藏；最终只提交一次；ChatGPT 能准确复述结构化结果并继续任务。
