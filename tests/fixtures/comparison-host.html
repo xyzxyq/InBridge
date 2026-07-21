@@ -6,19 +6,33 @@
     <link rel="icon" href="data:," />
     <title>InBridge comparison host fixture</title>
     <style>
-      body { margin: 24px; font-family: system-ui, sans-serif; }
-      iframe { width: min(100%, 1000px); height: 820px; border: 0; }
-      pre { max-width: 1000px; padding: 12px; overflow: auto; background: #f3f4f6; }
+      :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+      body { margin: 0; min-height: 100vh; color: #0d0d0d; background: #fff; }
+      body[data-theme="dark"] { color: #f4f4f4; background: #171717; }
+      main { width: min(100% - 32px, 1000px); margin: 0 auto; padding: 28px 0; }
+      .toolbar { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 12px; }
+      .toolbar button { padding: 7px 12px; border: 1px solid rgb(127 127 127 / 35%); border-radius: 999px; color: inherit; background: transparent; }
+      iframe { width: 100%; height: 760px; border: 0; }
+      .diagnostics { margin-top: 24px; }
+      pre { padding: 12px; overflow: auto; border-radius: 12px; background: rgb(127 127 127 / 12%); }
     </style>
   </head>
-  <body>
-    <h1>Comparison host</h1>
-    <iframe title="InBridge widget" src="/tests/fixtures/widget.html"></iframe>
-    <h2>Delivery record</h2>
-    <pre data-delivery>{"contextUpdates":0,"messages":0}</pre>
+  <body data-theme="light">
+    <main>
+      <div class="toolbar" aria-label="Theme preview">
+        <button type="button" data-set-theme="light">浅色</button>
+        <button type="button" data-set-theme="dark">深色</button>
+      </div>
+      <iframe title="InBridge widget" src="/tests/fixtures/widget.html"></iframe>
+      <section class="diagnostics">
+        <h2>Delivery record</h2>
+        <pre data-delivery>{"contextUpdates":0,"messages":0}</pre>
+      </section>
+    </main>
     <script>
       const frame = document.querySelector("iframe");
       const output = document.querySelector("[data-delivery]");
+      let activeTheme = "light";
       const delivery = { contextUpdates: 0, messages: 0, context: null, message: null };
       const structuredContent = {
         interactionId: "comparison_browser_check",
@@ -67,7 +81,7 @@
             protocolVersion: message.params.protocolVersion,
             hostInfo: { name: "inbridge-comparison-fixture", version: "1.0.0" },
             hostCapabilities: { updateModelContext: { structuredContent: {} }, message: { text: {} } },
-            hostContext: { theme: "light", locale: "zh-CN", platform: "web" }
+            hostContext: { theme: activeTheme, locale: "zh-CN", platform: "web" }
           });
           return;
         }
@@ -92,6 +106,18 @@
           showDelivery();
           reply(message.id, {});
         }
+      });
+
+      document.querySelectorAll("[data-set-theme]").forEach((button) => {
+        button.addEventListener("click", () => {
+          activeTheme = button.dataset.setTheme;
+          document.body.dataset.theme = activeTheme;
+          frame.contentWindow.postMessage({
+            jsonrpc: "2.0",
+            method: "ui/notifications/host-context-changed",
+            params: { theme: activeTheme }
+          }, "*");
+        });
       });
     </script>
   </body>

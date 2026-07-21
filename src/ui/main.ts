@@ -1,7 +1,19 @@
-import { App } from "@modelcontextprotocol/ext-apps";
+import {
+  App,
+  applyDocumentTheme,
+  applyHostFonts,
+  applyHostStyleVariables
+} from "@modelcontextprotocol/ext-apps";
 import { deliverInteractionResult } from "./bridge";
 import { comparisonSelectionText } from "./comparison";
+import {
+  initialInteractionLifecycle,
+  interactionPresentation,
+  transitionInteractionLifecycle,
+  type InteractionLifecycle
+} from "./lifecycle";
 import { createInteractionResult, type InteractionResult } from "./result";
+import { resolveInBridgeTheme, type InBridgeTheme } from "./theme";
 import {
   resolveVisibleControlIds,
   selectVisibleValues,
@@ -148,10 +160,29 @@ const root: HTMLElement = rootElement;
 
 const bridge = new App({ name: "inbridge-widget", version: "0.10.0" });
 let interaction: Interaction | undefined;
-let completed = false;
-let submissionInProgress = false;
+let lifecycle: InteractionLifecycle = initialInteractionLifecycle();
 let pendingResult: InteractionResult | undefined;
 let currentStepIndex = 0;
+let hostTheme: InBridgeTheme | undefined;
+
+const systemTheme = window.matchMedia("(prefers-color-scheme: dark)");
+
+function syncTheme(): void {
+  applyDocumentTheme(resolveInBridgeTheme(hostTheme, systemTheme.matches));
+}
+
+function applyHostAppearance(context: ReturnType<App["getHostContext"]>): void {
+  if (!context) return;
+  if (context.theme) hostTheme = context.theme;
+  if (context.styles?.variables) applyHostStyleVariables(context.styles.variables);
+  if (context.styles?.css?.fonts) applyHostFonts(context.styles.css.fonts);
+  syncTheme();
+}
+
+syncTheme();
+systemTheme.addEventListener("change", () => {
+  if (!hostTheme) syncTheme();
+});
 
 function setStatus(message: string, kind: "info" | "success" | "error" = "info"): void {
   const status = root.querySelector<HTMLElement>("[data-status]");
@@ -280,12 +311,24 @@ function returnToPreviousStep(): void {
   refreshWizardView();
 }
 
-function lockForm(): void {
+function setFormDisabled(disabled: boolean): void {
   root.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLButtonElement>("input, select, .actions button").forEach(
-    (element) => {
-      element.disabled = true;
-    }
+    (element) => { element.disabled = disabled; }
   );
+}
+
+function syncLifecycleView(): void {
+  const presentation = interactionPresentation(lifecycle);
+  const form = root.querySelector<HTMLFormElement>("form");
+  const actions = root.querySelector<HTMLElement>("[data-actions]");
+  const cancel = root.querySelector<HTMLButtonElement>("[data-cancel-action]");
+  const completionActions = root.querySelector<HTMLElement>("[data-completion-actions]");
+
+  setFormDisabled(presentation.formDisabled);
+  if (form) form.dataset.phase = lifecycle.phase;
+  if (actions) actions.hidden = !presentation.showPrimaryActions;
+  if (cancel) cancel.hidden = !presentation.showCancel;
+  if (completionActions) completionActions.hidden = !presentation.showReselect;
 }
 
 function showRecovery(result: InteractionResult, allowCopy: boolean): void {
@@ -315,41 +358,67 @@ async function copyFallback(): Promise<void> {
 }
 
 async function deliverPendingResult(): Promise<void> {
-  if (!pendingResult || submissionInProgress || completed) return;
-  submissionInProgress = true;
+  if (!pendingResult || lifecycle.phase !== "submitting") return;
+  const result = pendingResult;
   hideRecovery();
-  setStatus(pendingResult.status === "confirmed" ? "正在提交选择…" : "正在取消…");
+  syncLifecycleView();
+  setStatus(result.status === "confirmed" ? "正在提交选择…" : "正在取消…");
 
-  const outcome = await deliverInteractionResult(bridge, pendingResult);
-  submissionInProgress = false;
+  const outcome = await deliverInteractionResult(bridge, result);
+  if (pendingResult !== result || lifecycle.phase !== "submitting") return;
 
   if (outcome === "sent_with_context" || outcome === "sent_with_inline_result") {
-    completed = true;
+    lifecycle = transitionInteractionLifecycle(lifecycle, "delivery_success");
+    syncLifecycleView();
     setStatus(
-      pendingResult.status === "confirmed" ? "选择已提交，ChatGPT 将继续处理。" : "本次选择已取消。",
+      result.status === "confirmed" ? "选择已提交，ChatGPT 将继续处理。" : "本次选择已取消。",
       "success"
     );
     return;
   }
 
+  lifecycle = transitionInteractionLifecycle(lifecycle, "delivery_failure");
+  syncLifecycleView();
   if (outcome === "context_only") {
     setStatus("结果已写入模型上下文，但未能触发下一轮。你可以重试自动提交。", "error");
-    showRecovery(pendingResult, false);
+    showRecovery(result, false);
     return;
   }
 
   setStatus("Host 暂不支持自动提交。请重试，或复制结果 JSON 到对话中。", "error");
-  showRecovery(pendingResult, true);
+  showRecovery(result, true);
 }
 
 async function submit(status: InteractionResult["status"]): Promise<void> {
-  if (!interaction || completed || submissionInProgress || pendingResult) return;
+  if (!interaction || lifecycle.phase !== "editing" || pendingResult) return;
   const values = status === "confirmed" ? collectValues() : {};
   if (!values) return;
 
   pendingResult = createInteractionResult(interaction.interactionId, status, values);
-  lockForm();
+  lifecycle = transitionInteractionLifecycle(lifecycle, "submit");
+  syncLifecycleView();
   await deliverPendingResult();
+}
+
+function retryPendingResult(): void {
+  if (lifecycle.phase !== "recovery") return;
+  lifecycle = transitionInteractionLifecycle(lifecycle, "retry");
+  syncLifecycleView();
+  void deliverPendingResult();
+}
+
+function reselect(): void {
+  if (lifecycle.phase !== "completed") return;
+  lifecycle = transitionInteractionLifecycle(lifecycle, "reselect");
+  pendingResult = undefined;
+  hideRecovery();
+  syncLifecycleView();
+  refreshWizardView();
+  setStatus("可以修改选择并再次提交。", "info");
+
+  const focusTarget = root.querySelector<HTMLElement>("input:checked")
+    ?? root.querySelector<HTMLElement>('select, input:not([type="hidden"])');
+  focusTarget?.focus();
 }
 
 function appendDescription(container: HTMLElement, description?: string): void {
@@ -708,8 +777,7 @@ function refreshWizardView(): void {
 
 function render(config: Interaction): void {
   interaction = config;
-  completed = false;
-  submissionInProgress = false;
+  lifecycle = initialInteractionLifecycle();
   pendingResult = undefined;
   currentStepIndex = 0;
   root.replaceChildren();
@@ -785,6 +853,7 @@ function render(config: Interaction): void {
 
   const actions = document.createElement("div");
   actions.className = "actions";
+  actions.dataset.actions = "";
   const previous = document.createElement("button");
   previous.type = "button";
   previous.dataset.previousStep = "";
@@ -801,6 +870,7 @@ function render(config: Interaction): void {
     const cancel = document.createElement("button");
     cancel.type = "button";
     cancel.textContent = config.cancelLabel;
+    cancel.dataset.cancelAction = "";
     cancel.addEventListener("click", () => void submit("cancelled"));
     actions.append(cancel);
   }
@@ -813,6 +883,18 @@ function render(config: Interaction): void {
   status.setAttribute("role", "status");
   panel.append(status);
 
+  const completionActions = document.createElement("div");
+  completionActions.className = "completion-actions";
+  completionActions.dataset.completionActions = "";
+  completionActions.hidden = true;
+  const reselectButton = document.createElement("button");
+  reselectButton.type = "button";
+  reselectButton.className = "secondary";
+  reselectButton.textContent = "重新选择";
+  reselectButton.addEventListener("click", reselect);
+  completionActions.append(reselectButton);
+  panel.append(completionActions);
+
   const recovery = document.createElement("div");
   recovery.className = "recovery";
   recovery.dataset.recovery = "";
@@ -821,7 +903,7 @@ function render(config: Interaction): void {
   retry.type = "button";
   retry.dataset.retry = "";
   retry.textContent = "重试自动提交";
-  retry.addEventListener("click", () => void deliverPendingResult());
+  retry.addEventListener("click", retryPendingResult);
   recovery.append(retry);
 
   const fallback = document.createElement("div");
@@ -841,6 +923,7 @@ function render(config: Interaction): void {
   panel.append(recovery);
 
   root.append(panel);
+  syncLifecycleView();
   refreshWizardView();
 }
 
@@ -853,8 +936,14 @@ bridge.ontoolresult = (result) => {
   render(config);
 };
 
+bridge.onhostcontextchanged = (context) => {
+  applyHostAppearance(context);
+};
+
 root.innerHTML = '<p class="loading">正在加载交互选项…</p>';
-bridge.connect().catch((error) => {
-  console.error("Unable to initialize MCP Apps bridge", error);
-  root.innerHTML = '<p class="fatal">交互组件初始化失败，请在对话中改用文本方式继续。</p>';
-});
+bridge.connect()
+  .then(() => applyHostAppearance(bridge.getHostContext()))
+  .catch((error) => {
+    console.error("Unable to initialize MCP Apps bridge", error);
+    root.innerHTML = '<p class="fatal">交互组件初始化失败，请在对话中改用文本方式继续。</p>';
+  });

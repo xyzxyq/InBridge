@@ -36,7 +36,7 @@ The end-to-end flow is:
 1. The model calls an InBridge tool.
 2. ChatGPT loads the inline Widget.
 3. The user selects, configures, confirms, or cancels.
-4. The Widget freezes the result to prevent duplicate or mutated submissions.
+4. The Widget freezes the result to prevent duplicate or mutated submissions; after success, a reselect action replaces the one-time submit controls.
 5. `updateModelContext` writes the structured result into context.
 6. `sendMessage` triggers the next model turn.
 7. The model reads the result and continues the task.
@@ -97,7 +97,7 @@ The diagram is authored in [LaTeX TikZ](docs/architecture.tex). A directly viewa
 | HTTP boundary | Stateless MCP requests, health, icon, security headers, safe errors | Express 5, Streamable HTTP |
 | Configuration core | Whitelist schemas, defaults, cross-field validation, templates | Zod 4, TypeScript |
 | MCP layer | Tool discovery and calls, UI resource, server identity | MCP SDK, MCP Apps SDK |
-| Widget layer | Controls, visibility, wizard, preview, accessibility, state | Native DOM, CSS, MCP Apps bridge |
+| Widget layer | Controls, Host theme sync, visibility, wizard, preview, accessibility, state | Native DOM, CSS, MCP Apps bridge |
 | Result delivery | Context update, next-turn trigger, retry, manual fallback | `updateModelContext`, `sendMessage` |
 | Operations | CI gates, deployment, logs, rate limits, remote monitoring | Vercel, GitHub Actions |
 
@@ -110,6 +110,8 @@ This model works well with serverless deployment and reduces cross-user state le
 ### Widget delivery
 
 Vite builds the Widget into one IIFE JavaScript bundle and one CSS asset. When the MCP UI resource is read, the server inlines both files into HTML and returns `text/html;profile=mcp-app`. The current Widget does not require external scripts, styles, images, or network requests.
+
+The Widget follows ChatGPT's active light or dark appearance through MCP Apps `hostContext.theme` and listens for live theme changes. It falls back to the system `prefers-color-scheme` only when the Host omits a theme. Semantic tokens drive surfaces, borders, text, and focus states so a light card never clashes with a dark conversation.
 
 ## MCP surface
 
@@ -170,7 +172,7 @@ The Widget reports four delivery outcomes:
 | `context_only` | Context was updated but the next turn could not be triggered; retry is available |
 | `manual_copy` | Neither Host capability was available; retry and copyable JSON are provided |
 
-Once submission starts, values are frozen. Retrying sends the same immutable result instead of rereading the form.
+Once submission starts, values are frozen. Retrying sends the same immutable result instead of rereading the form. After successful delivery, submit and cancel disappear and only **Reselect** remains. Reselecting restores editing for a corrected submission without restoring cancel, keeping the one-time interaction unambiguous.
 
 ## Security model
 
@@ -359,7 +361,9 @@ InBridge/
 │   └── ui/
 │       ├── main.ts              # Widget renderer and state machine
 │       ├── bridge.ts            # Host capabilities and delivery
+│       ├── lifecycle.ts         # One-time submit and reselect state model
 │       ├── result.ts            # Versioned result protocol
+│       ├── theme.ts             # Host/system theme resolution
 │       ├── visibility.ts        # Conditional visibility model
 │       ├── wizard.ts            # Wizard navigation model
 │       └── styles.css           # Responsive Widget styles
@@ -421,12 +425,12 @@ The current release focuses on short-lived structured interactions with explicit
 - durable preference storage;
 - OAuth or multi-tenant identity isolation.
 
-Conditional controls, multi-step wizards, and comparison cards are complete. Candidate next steps include:
+Conditional controls, multi-step wizards, comparison cards, Host theme sync, and a dedicated submission lifecycle are complete. Candidate next steps include:
 
 - controlled slide, chart, and document previews;
 - explicitly authorized presets;
 - browser-level Widget E2E coverage;
-- further separation of rendering and submission state machines.
+- focused keyboard and touch accessibility regression coverage.
 
 ## Design and reference documents
 
