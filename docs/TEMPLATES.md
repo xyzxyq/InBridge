@@ -125,4 +125,4 @@
 
 每组允许 2–6 张卡片。`badge` 只作说明，不会自动替用户选择；如提供 `defaultValue`，它必须匹配某张卡片的 `value`。
 
-所有模板最终都会转换为与 `ask_user_interactively` 相同的严格白名单结构，并复用同一套确认、取消、重试和结果回传协议。旧名称 `render_interaction` 仅作为应用侧兼容别名保留。
+所有模板最终都会转换为与 `ask_user_interactively` 相同的严格白名单结构，并复用同一套确认、取消、重试和结果回传协议。

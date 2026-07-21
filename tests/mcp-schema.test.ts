@@ -84,14 +84,7 @@ describe("MCP tool descriptors", () => {
       });
     }
 
-    const legacy = result.tools.find((candidate) => candidate.name === "render_interaction");
-    expect(legacy).toMatchObject({
-      description: expect.stringContaining("Deprecated compatibility alias"),
-      _meta: {
-        ui: { visibility: ["app"] },
-        "openai/visibility": "private"
-      }
-    });
+    expect(result.tools.find((candidate) => candidate.name === "render_interaction")).toBeUndefined();
   });
 
   it("uses intent-rich descriptions and marks template listing as a rare fallback", async () => {

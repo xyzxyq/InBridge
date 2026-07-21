@@ -136,7 +136,7 @@ The Widget follows ChatGPT's active light or dark appearance through MCP Apps `h
 | `ask_user_interactively` | Builds a custom declarative interaction when no template fits |
 | `list_interaction_templates` | Rare catalog fallback only when the task does not reveal a suitable template |
 
-Routine calls should not enumerate templates first: call `render_interaction_template` directly for known intents and use `ask_user_interactively` only for genuinely custom field combinations. The old `render_interaction` entry remains as an app-only compatibility alias and is no longer recommended to the model.
+Routine calls should not enumerate templates first: call `render_interaction_template` directly for known intents and use `ask_user_interactively` only for genuinely custom field combinations.
 
 ### Built-in templates
 

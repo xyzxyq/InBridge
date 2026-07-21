@@ -72,8 +72,7 @@ try {
   const tools = await client.listTools();
   const primaryCustomTool = tools.tools.find((tool) => tool.name === "ask_user_interactively");
   assert.match(primaryCustomTool?.description ?? "", /Proactively ask the user/);
-  const legacyRenderTool = tools.tools.find((tool) => tool.name === "render_interaction");
-  assert.deepEqual(legacyRenderTool?._meta?.ui?.visibility, ["app"]);
+  assert.equal(tools.tools.some((tool) => tool.name === "render_interaction"), false);
   const catalogTool = tools.tools.find((tool) => tool.name === "list_interaction_templates");
   assert.match(catalogTool?.description ?? "", /Rare fallback only/);
   const templateTool = tools.tools.find((tool) => tool.name === "render_interaction_template");

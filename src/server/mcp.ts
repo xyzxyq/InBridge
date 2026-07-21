@@ -30,12 +30,6 @@ const RENDER_TOOL_META = {
   "openai/toolInvocation/invoked": "交互选项已准备好"
 };
 
-const LEGACY_RENDER_TOOL_META = {
-  ...RENDER_TOOL_META,
-  ui: { resourceUri: WIDGET_URI, visibility: ["app"] as Array<"app"> },
-  "openai/visibility": "private"
-};
-
 const RENDER_TOOL_ANNOTATIONS = {
   readOnlyHint: true,
   destructiveHint: false,
@@ -165,32 +159,6 @@ export function createMcpServer(): McpServer {
       outputSchema: normalizedInteractionSchema,
       annotations: RENDER_TOOL_ANNOTATIONS,
       _meta: RENDER_TOOL_META
-    },
-    async (input) => {
-      const normalized = normalizeInteraction(input);
-      return {
-        structuredContent: normalized,
-        content: [
-          {
-            type: "text",
-            text: `Displayed interaction ${normalized.interactionId}. Wait for the user to confirm or cancel in the inline panel.`
-          }
-        ]
-      };
-    }
-  );
-
-  registerAppTool(
-    server,
-    "render_interaction",
-    {
-      title: "Legacy custom interaction renderer",
-      description:
-        "Deprecated compatibility alias for ask_user_interactively. New model-initiated interactions must use ask_user_interactively.",
-      inputSchema: interactionConfigSchema,
-      outputSchema: normalizedInteractionSchema,
-      annotations: RENDER_TOOL_ANNOTATIONS,
-      _meta: LEGACY_RENDER_TOOL_META
     },
     async (input) => {
       const normalized = normalizeInteraction(input);
