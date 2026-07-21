@@ -29,7 +29,7 @@ describe("MCP tool descriptors", () => {
 
     expect(client.getServerVersion()).toMatchObject({
       name: "inbridge",
-      version: "0.11.0",
+      version: "0.12.0",
       icons: [{ src: APP_ICON_URL, mimeType: "image/png", sizes: ["981x1040"] }]
     });
   });
@@ -65,10 +65,10 @@ describe("MCP tool descriptors", () => {
         },
         _meta: {
           ui: {
-            resourceUri: "ui://inbridge/interaction-v11.html",
+            resourceUri: "ui://inbridge/interaction-v12.html",
             visibility: ["model", "app"]
           },
-          "openai/outputTemplate": "ui://inbridge/interaction-v11.html",
+          "openai/outputTemplate": "ui://inbridge/interaction-v12.html",
           "openai/visibility": "public"
         }
       });

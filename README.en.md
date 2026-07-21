@@ -16,7 +16,7 @@
 
   <p>
     <a href="https://github.com/xyzxyq/InBridge/actions/workflows/ci.yml"><img src="https://github.com/xyzxyq/InBridge/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
-    <img src="https://img.shields.io/badge/version-0.11.0-8b5cf6" alt="Version 0.11.0" />
+    <img src="https://img.shields.io/badge/version-0.12.0-8b5cf6" alt="Version 0.12.0" />
     <img src="https://img.shields.io/badge/Node.js-22.x-339933?logo=nodedotjs&logoColor=white" alt="Node.js 22.x" />
     <img src="https://img.shields.io/badge/MCP%20Apps-1.7.4-2563eb" alt="MCP Apps 1.7.4" />
     <img src="https://img.shields.io/badge/TypeScript-5.9-3178c6?logo=typescript&logoColor=white" alt="TypeScript 5.9" />
@@ -79,6 +79,7 @@ InBridge turns these concerns into a controlled declarative protocol. The model 
 - hidden values automatically excluded from validation, previews, and results;
 - optional 2–8 step wizards with per-step validation and preserved values;
 - safe `summary` and `theme_card` live previews;
+- KaTeX typesetting in titles, prompts, card options, descriptions, and previews, with `$...$`, `$$...$$`, `\\(...\\)`, `\\[...\\]`, plus conservative recognition of common undelimited notation;
 - distinct confirmed and cancelled semantics;
 - frozen submission values and duplicate-submit protection;
 - Host capability negotiation, retries, and copyable JSON fallback;
@@ -109,7 +110,7 @@ This model works well with serverless deployment and reduces cross-user state le
 
 ### Widget delivery
 
-Vite builds the Widget into one IIFE JavaScript bundle and one CSS asset. When the MCP UI resource is read, the server inlines both files into HTML and returns `text/html;profile=mcp-app`. The current Widget does not require external scripts, styles, images, or network requests.
+Vite builds the Widget into one IIFE JavaScript bundle and one CSS asset. When the MCP UI resource is read, the server inlines both files into HTML and returns `text/html;profile=mcp-app`. The KaTeX parser is bundled locally and emits native MathML without a CDN or external fonts; the Widget requires no external scripts, styles, images, or network requests. Math rendering keeps `trust: false`, and invalid expressions safely fall back to their source text.
 
 The Widget follows ChatGPT's active light or dark appearance through MCP Apps `hostContext.theme` and listens for live theme changes. It falls back to the system `prefers-color-scheme` only when the Host omits a theme. Host-provided `--color-*-info` and ring tokens also drive selected cards, radios, switches, sliders, and focus rings, keeping them aligned with the user's ChatGPT accent color; older Hosts receive an accessible blue fallback. Semantic tokens drive every state so cards remain coherent as appearance settings change.
 

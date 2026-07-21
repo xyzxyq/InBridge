@@ -53,6 +53,33 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+.math-inline {
+  display: inline;
+  white-space: nowrap;
+}
+
+.math-display {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-block: 2px;
+}
+
+.math-display .katex-display {
+  margin: 0.35em 0;
+  text-align: left;
+}
+
+.math-fallback {
+  white-space: pre-wrap;
+}
+
+.katex {
+  color: inherit;
+  font-size: 1.04em;
+}
+
 button,
 input,
 select,
@@ -219,6 +246,17 @@ legend {
   background: var(--ib-surface);
   cursor: pointer;
   transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+.choice > span {
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overflow-wrap: anywhere;
+  padding-block: 2px;
+  scrollbar-width: thin;
 }
 
 .choice:has(input:checked) {
@@ -694,6 +732,14 @@ form[data-phase="completed"] :disabled {
 @media (min-width: 560px) {
   .choices {
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+
+  .choices-math {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  }
+
+  .choices-math-long {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
   }
 }
 

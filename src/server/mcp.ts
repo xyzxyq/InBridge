@@ -17,7 +17,7 @@ import {
   templateCatalogOutputSchema
 } from "./templates.js";
 
-export const WIDGET_URI = "ui://inbridge/interaction-v11.html";
+export const WIDGET_URI = "ui://inbridge/interaction-v12.html";
 export const APP_ICON_URL = "https://mcp.example.com/icon.png?v=2";
 
 const RENDER_TOOL_META = {
@@ -67,10 +67,10 @@ async function loadWidgetHtml(): Promise<string> {
 
 export function createMcpServer(): McpServer {
   const server = new McpServer(
-    { name: "inbridge", version: "0.11.0", icons: APP_ICONS },
+    { name: "inbridge", version: "0.12.0", icons: APP_ICONS },
     {
       instructions:
-        "Prefer render_interaction_template when decision, confirmation, experiment_config, or theme_config matches the task. Use list_interaction_templates when unsure. Use render_interaction only for novel forms that need custom controls. After rendering, wait for the user to confirm or cancel in the inline panel."
+        "Prefer render_interaction_template when decision, confirmation, experiment_config, or theme_config matches the task. Use list_interaction_templates when unsure. Use render_interaction only for novel forms that need custom controls. Preserve mathematical notation as LaTeX, preferably with $...$ for inline formulas and $$...$$ for display formulas. After rendering, wait for the user to confirm or cancel in the inline panel."
     }
   );
 

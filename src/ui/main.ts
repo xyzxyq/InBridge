@@ -12,6 +12,7 @@ import {
   transitionInteractionLifecycle,
   type InteractionLifecycle
 } from "./lifecycle";
+import { parseRichText, renderRichText } from "./math";
 import { createInteractionResult, type InteractionResult } from "./result";
 import { resolveInBridgeTheme, type InBridgeTheme } from "./theme";
 import {
@@ -168,7 +169,7 @@ const rootElement = document.querySelector<HTMLElement>("#app");
 if (!rootElement) throw new Error("Missing #app root");
 const root: HTMLElement = rootElement;
 
-const bridge = new App({ name: "inbridge-widget", version: "0.11.0" });
+const bridge = new App({ name: "inbridge-widget", version: "0.12.0" });
 let interaction: Interaction | undefined;
 let lifecycle: InteractionLifecycle = initialInteractionLifecycle();
 let pendingResult: InteractionResult | undefined;
@@ -498,7 +499,7 @@ function appendDescription(container: HTMLElement, description?: string): void {
   if (!description) return;
   const help = document.createElement("p");
   help.className = "help";
-  help.textContent = description;
+  renderRichText(help, description);
   container.append(help);
 }
 
@@ -506,13 +507,16 @@ function createChoiceGroup(control: RadioControl | CheckboxGroupControl): HTMLEl
   const fieldset = document.createElement("fieldset");
   fieldset.dataset.controlId = control.id;
   const legend = document.createElement("legend");
-  legend.textContent = control.required ? `${control.label} *` : control.label;
+  renderRichText(legend, control.required ? `${control.label} *` : control.label);
   fieldset.append(legend);
   appendDescription(fieldset, control.description);
 
   const choices = document.createElement("div");
   choices.className = "choices";
   for (const option of control.options) {
+    const mathSegments = parseRichText(option.label).filter((segment) => segment.type === "math");
+    if (mathSegments.length > 0) choices.classList.add("choices-math");
+    if (mathSegments.some((segment) => segment.source.length > 36)) choices.classList.add("choices-math-long");
     const label = document.createElement("label");
     label.className = "choice";
     const input = document.createElement("input");
@@ -525,7 +529,7 @@ function createChoiceGroup(control: RadioControl | CheckboxGroupControl): HTMLEl
         : control.defaultValue.includes(option.value);
     input.addEventListener("change", () => handleControlChange(control.id));
     const text = document.createElement("span");
-    text.textContent = option.label;
+    renderRichText(text, option.label);
     label.append(input, text);
     choices.append(label);
   }
@@ -542,7 +546,7 @@ function appendComparisonList(container: HTMLElement, titleText: string, items: 
   const list = document.createElement("ul");
   items.forEach((item) => {
     const entry = document.createElement("li");
-    entry.textContent = item;
+    renderRichText(entry, item);
     list.append(entry);
   });
   section.append(title, list);
@@ -564,7 +568,7 @@ function createComparisonCards(control: ComparisonCardsControl): HTMLElement {
   fieldset.className = "comparison-control";
   fieldset.dataset.controlId = control.id;
   const legend = document.createElement("legend");
-  legend.textContent = control.required ? `${control.label} *` : control.label;
+  renderRichText(legend, control.required ? `${control.label} *` : control.label);
   fieldset.append(legend);
   appendDescription(fieldset, control.description);
 
@@ -589,17 +593,17 @@ function createComparisonCards(control: ComparisonCardsControl): HTMLElement {
     if (option.badge) {
       const badge = document.createElement("span");
       badge.className = "comparison-badge";
-      badge.textContent = option.badge;
+      renderRichText(badge, option.badge);
       content.append(badge);
     }
     const title = document.createElement("strong");
     title.className = "comparison-title";
-    title.textContent = option.title;
+    renderRichText(title, option.title);
     content.append(title);
     if (option.description) {
       const description = document.createElement("span");
       description.className = "comparison-description";
-      description.textContent = option.description;
+      renderRichText(description, option.description);
       content.append(description);
     }
     appendComparisonList(content, "优势", option.pros);
@@ -625,7 +629,7 @@ function createField(control: Exclude<Control, RadioControl | CheckboxGroupContr
   const label = document.createElement("label");
   label.className = "control-label";
   label.htmlFor = inputId;
-  label.textContent = control.required ? `${control.label} *` : control.label;
+  renderRichText(label, control.required ? `${control.label} *` : control.label);
   container.append(label);
   appendDescription(container, control.description);
 
@@ -704,7 +708,7 @@ function createField(control: Exclude<Control, RadioControl | CheckboxGroupContr
     track.className = "switch-track";
     track.setAttribute("aria-hidden", "true");
     const text = document.createElement("span");
-    text.textContent = control.required ? `${control.label} *` : control.label;
+    renderRichText(text, control.required ? `${control.label} *` : control.label);
     label.append(input, track, text);
     container.insertBefore(label, container.firstChild);
     container.append(...Array.from(container.children).filter((child) => child !== label));
@@ -766,9 +770,9 @@ function renderThemeCard(container: HTMLElement, preview: ThemeCardPreview, valu
   tag.className = "theme-tag";
   tag.textContent = style.toUpperCase();
   const title = document.createElement("h4");
-  title.textContent = preview.title ?? "示例标题";
+  renderRichText(title, preview.title ?? "示例标题");
   const body = document.createElement("p");
-  body.textContent = preview.body ?? "预览会安全地响应颜色、明暗、密度和风格参数。";
+  renderRichText(body, preview.body ?? "预览会安全地响应颜色、明暗、密度和风格参数。");
   card.append(accent, tag, title, body);
   container.append(card);
 }
@@ -784,7 +788,7 @@ function renderSummary(container: HTMLElement, preview: SummaryPreview, values: 
   for (const [label, controlId] of entries) {
     if (!Object.hasOwn(values, controlId)) continue;
     const term = document.createElement("dt");
-    term.textContent = label;
+    renderRichText(term, label);
     const detail = document.createElement("dd");
     detail.textContent = formatPreviewValue(values[controlId]);
     list.append(term, detail);
@@ -800,7 +804,7 @@ function refreshPreview(): void {
   container.replaceChildren();
 
   const title = document.createElement("h3");
-  title.textContent = interaction.preview.title ?? (interaction.preview.type === "summary" ? "当前配置" : "实时预览");
+  renderRichText(title, interaction.preview.title ?? (interaction.preview.type === "summary" ? "当前配置" : "实时预览"));
   container.append(title);
   if (interaction.preview.type === "theme_card") {
     renderThemeCard(container, interaction.preview, values);
@@ -839,8 +843,9 @@ function refreshWizardView(): void {
 
   const description = root.querySelector<HTMLElement>("[data-step-description]");
   if (description) {
-    description.textContent = steps[currentStepIndex]?.description ?? "";
-    description.hidden = !description.textContent;
+    const stepDescription = steps[currentStepIndex]?.description ?? "";
+    renderRichText(description, stepDescription);
+    description.hidden = !stepDescription;
   }
   if (previous) previous.hidden = currentStepIndex === 0;
   if (primary) primary.textContent = finalStep ? interaction.submitLabel : "下一步";
@@ -860,11 +865,11 @@ function render(config: Interaction): void {
   panel.className = "panel";
   const heading = document.createElement("header");
   const title = document.createElement("h2");
-  title.textContent = config.title;
+  renderRichText(title, config.title);
   heading.append(title);
   if (config.description) {
     const description = document.createElement("p");
-    description.textContent = config.description;
+    renderRichText(description, config.description);
     heading.append(description);
   }
   panel.append(heading);
@@ -887,7 +892,7 @@ function render(config: Interaction): void {
       number.className = "wizard-step-number";
       number.textContent = String(index + 1);
       const label = document.createElement("span");
-      label.textContent = step.title;
+      renderRichText(label, step.title);
       item.append(number, label);
       stepList.append(item);
     });

@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:," />
+    <title>InBridge math host fixture</title>
+    <style>
+      :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+      body { margin: 0; min-height: 100vh; color: #0d0d0d; background: #fff; }
+      body[data-theme="dark"] { color: #f4f4f4; background: #171717; }
+      main { width: min(100% - 32px, 1000px); margin: 0 auto; padding: 28px 0; }
+      .toolbar { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+      button { padding: 7px 12px; border: 1px solid rgb(127 127 127 / 35%); border-radius: 999px; color: inherit; background: transparent; }
+      iframe { width: 100%; height: 720px; border: 0; }
+    </style>
+  </head>
+  <body data-theme="light">
+    <main>
+      <div class="toolbar"><button type="button" data-toggle-theme>切换深浅主题</button></div>
+      <iframe title="InBridge math widget" src="/tests/fixtures/widget.html"></iframe>
+    </main>
+    <script>
+      const frame = document.querySelector("iframe");
+      let activeTheme = "light";
+      const structuredContent = {
+        interactionId: "math_browser_check",
+        title: "强化学习公式检查：$V^\\pi(s)$",
+        description: "显式行内公式、块级公式与常见无定界符写法应保持清晰。$$V^\\pi(s)=\\sum_a \\pi(a|s)Q^\\pi(s,a)$$",
+        controls: [
+          {
+            id: "bellman",
+            type: "radio",
+            label: "在折扣马尔可夫决策过程中，状态价值函数 V^π(s) 的贝尔曼期望方程是哪一项？",
+            required: true,
+            defaultValue: "expectation",
+            options: [
+              { value: "optimal", label: "$V^\\pi(s)=\\max_a Q^\\pi(s,a)$" },
+              { value: "expectation", label: "V^π(s)=Σ_a π(a|s) Σ_{s',r} p(s',r|s,a)[r+γV^π(s')]" },
+              { value: "recursive", label: "$V^\\pi(s)=r(s)+\\gamma V^\\pi(s)$" }
+            ]
+          },
+          {
+            id: "target",
+            type: "radio",
+            label: "Q-learning 更新中的目标值通常是哪一项？",
+            required: true,
+            options: [
+              { value: "policy", label: "r+γQ(s',a')，其中 a' 由当前策略采样" },
+              { value: "max", label: "$r+\\gamma\\max_{a'}Q(s',a')$" },
+              { value: "min", label: "$r+\\gamma\\min_{a'}Q(s',a')$" }
+            ]
+          }
+        ],
+        submitLabel: "提交答案",
+        cancelLabel: "取消"
+      };
+
+      function reply(id, result) {
+        frame.contentWindow.postMessage({ jsonrpc: "2.0", id, result }, "*");
+      }
+
+      window.addEventListener("message", (event) => {
+        if (event.source !== frame.contentWindow || event.data?.jsonrpc !== "2.0") return;
+        const message = event.data;
+        if (message.method === "ui/initialize") {
+          reply(message.id, {
+            protocolVersion: message.params.protocolVersion,
+            hostInfo: { name: "inbridge-math-fixture", version: "1.0.0" },
+            hostCapabilities: { updateModelContext: { structuredContent: {} }, message: { text: {} } },
+            hostContext: { theme: activeTheme, locale: "zh-CN", platform: "web" }
+          });
+        } else if (message.method === "ui/notifications/initialized") {
+          frame.contentWindow.postMessage({
+            jsonrpc: "2.0",
+            method: "ui/notifications/tool-result",
+            params: { content: [], structuredContent }
+          }, "*");
+        } else if (message.method === "ui/update-model-context" || message.method === "ui/message") {
+          reply(message.id, {});
+        }
+      });
+
+      document.querySelector("[data-toggle-theme]").addEventListener("click", () => {
+        activeTheme = activeTheme === "light" ? "dark" : "light";
+        document.body.dataset.theme = activeTheme;
+        frame.contentWindow.postMessage({
+          jsonrpc: "2.0",
+          method: "ui/notifications/host-context-changed",
+          params: { theme: activeTheme }
+        }, "*");
+      });
+    </script>
+  </body>
+</html>
