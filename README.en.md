@@ -7,6 +7,8 @@
   <p>
     <a href="README.md">中文</a>
     ·
+    <a href="#interface-showcase">Interface showcase</a>
+    ·
     <a href="#deploy-your-own-instance">Deployment guide</a>
     ·
     <a href="docs/TEMPLATES.md">Templates</a>
@@ -45,6 +47,37 @@ The end-to-end flow is:
 7. The model reads the result and continues the task.
 
 The full loop has been validated in ChatGPT Developer Mode and includes deployment support for Vercel and standard Node.js hosts. This repository does not provide a shared public instance; each user should deploy and manage their own MCP endpoint.
+
+## Interface showcase
+
+InBridge combines radio choices, checkboxes, sliders, switches, color controls, live previews, and multi-step flows into structured interfaces embedded directly in ChatGPT conversations. Click any image to view it at full size.
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="docs/assets/showcase/custom-assistant-preferences.png"><img src="docs/assets/showcase/custom-assistant-preferences.png" alt="AI assistant interface and behavior preferences" width="100%" /></a>
+      <br />
+      <sub><strong>Custom preferences</strong> — Radio choices, checkboxes, a slider, and a switch in a two-step wizard.</sub>
+    </td>
+    <td width="50%" valign="top">
+      <a href="docs/assets/showcase/experiment-config-wizard.png"><img src="docs/assets/showcase/experiment-config-wizard.png" alt="Reinforcement learning experiment configuration wizard" width="100%" /></a>
+      <br />
+      <sub><strong>Experiment wizard</strong> — Collect research direction, environments, and training parameters step by step.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="docs/assets/showcase/interactive-learning-quiz.png"><img src="docs/assets/showcase/interactive-learning-quiz.png" alt="Multi-step deep learning quiz" width="100%" /></a>
+      <br />
+      <sub><strong>Interactive learning quiz</strong> — Present questions, choices, and progress through a five-step flow.</sub>
+    </td>
+    <td width="50%" valign="top">
+      <a href="docs/assets/showcase/theme-live-preview.png"><img src="docs/assets/showcase/theme-live-preview.png" alt="Live README visual theme preview" width="100%" /></a>
+      <br />
+      <sub><strong>Live theme preview</strong> — Coordinate style, color, brightness, and information density.</sub>
+    </td>
+  </tr>
+</table>
 
 ## Why InBridge
 

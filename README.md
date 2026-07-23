@@ -7,6 +7,8 @@
   <p>
     <a href="README.en.md">English</a>
     ·
+    <a href="#界面展示">界面展示</a>
+    ·
     <a href="#部署自己的实例">部署指南</a>
     ·
     <a href="docs/TEMPLATES.md">模板文档</a>
@@ -45,6 +47,37 @@ InBridge 是一个面向 ChatGPT 的 MCP App。当模型需要用户选择方案
 7. 模型读取结构化结果并继续任务。
 
 InBridge 已通过 ChatGPT Developer Mode 的真实闭环验证，并提供 Vercel 与标准 Node.js 自部署配置。仓库不提供共享公共实例，每位用户应部署和管理自己的 MCP 地址。
+
+## 界面展示
+
+InBridge 将单选、多选、滑块、开关、颜色选择、实时预览和多步骤流程组合成可直接嵌入 ChatGPT 对话的结构化界面。点击图片可查看原始尺寸。
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="docs/assets/showcase/custom-assistant-preferences.png"><img src="docs/assets/showcase/custom-assistant-preferences.png" alt="AI 助手界面与行为偏好配置" width="100%" /></a>
+      <br />
+      <sub><strong>自定义偏好配置</strong> — 在两步向导中组合单选、多选、滑块与开关。</sub>
+    </td>
+    <td width="50%" valign="top">
+      <a href="docs/assets/showcase/experiment-config-wizard.png"><img src="docs/assets/showcase/experiment-config-wizard.png" alt="强化学习实验配置向导" width="100%" /></a>
+      <br />
+      <sub><strong>实验配置向导</strong> — 分步骤收集研究方向、环境和训练参数。</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="docs/assets/showcase/interactive-learning-quiz.png"><img src="docs/assets/showcase/interactive-learning-quiz.png" alt="深度学习多步骤交互测验" width="100%" /></a>
+      <br />
+      <sub><strong>交互式学习测验</strong> — 通过五步流程呈现问题、选项与进度。</sub>
+    </td>
+    <td width="50%" valign="top">
+      <a href="docs/assets/showcase/theme-live-preview.png"><img src="docs/assets/showcase/theme-live-preview.png" alt="README 视觉主题实时预览" width="100%" /></a>
+      <br />
+      <sub><strong>主题实时预览</strong> — 联动样式、颜色、亮度和信息密度。</sub>
+    </td>
+  </tr>
+</table>
 
 ## 为什么需要 InBridge
 
